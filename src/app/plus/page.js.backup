@@ -1,0 +1,630 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { 
+  UserPlusIcon, 
+  LinkIcon, 
+  CheckCircleIcon, 
+  ClockIcon,
+  ExclamationTriangleIcon
+} from '@heroicons/react/24/outline';
+
+export default function BerkomunitasPlusPage() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+  const [connectionStatus, setConnectionStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('connect'); // 'connect' or 'register'
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [formData, setFormData] = useState({
+    reseller_id: '',
+    input_phone: ''
+  });
+  const [message, setMessage] = useState(null);
+
+  // Check current connection status
+  useEffect(() => {
+    if (isLoaded && user) {
+      checkConnectionStatus();
+    }
+  }, [isLoaded, user]);
+
+  const checkConnectionStatus = async () => {
+    try {
+      // Get member ID dari user metadata atau fetch dari members table
+      const memberResponse = await fetch(`/api/members/current`);
+      const memberData = await memberResponse.json();
+      
+      if (memberData.success) {
+        const memberId = memberData.member.id;
+        
+        // Check privilege status
+        const privilegeResponse = await fetch(`/api/user/privileges?member_id=${memberId}`);
+        const privilegeData = await privilegeResponse.json();
+        
+        if (privilegeData.success) {
+          setConnectionStatus({
+            is_connected: privilegeData.data.bc_connection !== null,
+            connection: privilegeData.data.bc_connection,
+            current_privilege: privilegeData.data.has_berkomunitasplus ? 'berkomunitasplus' : 'standard',
+            member_info: privilegeData.data.member,
+            privileges: privilegeData.data.privileges
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check connection status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConnect = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage(null);
+
+    try {
+      // Normalize reseller_id - hapus semua karakter non-digit
+      const normalizedResellerId = formData.reseller_id.replace(/[^0-9]/g, '');
+      
+      if (normalizedResellerId.length < 3) {
+        setMessage({
+          type: 'error',
+          text: 'ID Reseller minimal 3 digit angka'
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      // Step 1: Preview data untuk konfirmasi
+      const previewResponse = await fetch('/api/beauty-consultant/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reseller_id_input: normalizedResellerId,
+          input_phone: formData.input_phone
+        }),
+      });
+
+      const previewResult = await previewResponse.json();
+
+      if (previewResult.success) {
+        setPreviewData(previewResult.data);
+        setShowConfirmModal(true);
+      } else {
+        setMessage({
+          type: 'error',
+          text: previewResult.message || 'Data tidak ditemukan atau tidak cocok'
+        });
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Gagal memverifikasi data. Silakan coba lagi.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmConnection = async () => {
+    setSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/beauty-consultant/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          resellerId: previewData.resellerId,
+          input_phone: formData.input_phone,
+          confirmed: true
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMessage({
+          type: 'success',
+          text: data.message,
+          details: {
+            bc_name: data.data.bc_name,
+            verification_status: data.data.verification_status,
+            auto_verified: data.data.auto_verified,
+            privilege_updated: data.data.privilege_updated
+          }
+        });
+        
+        // Close modal
+        setShowConfirmModal(false);
+        setPreviewData(null);
+        
+        // Refresh connection status
+        await checkConnectionStatus();
+        
+        // Reset form
+        setFormData({ reseller_id: '', input_phone: '' });
+        
+        // Redirect to profile after successful connection
+        if (data.data.auto_verified) {
+          setTimeout(() => {
+            router.push('/profil');
+          }, 3000);
+        }
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.message || data.error
+        });
+        setShowConfirmModal(false);
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Koneksi gagal. Silakan coba lagi.'
+      });
+      setShowConfirmModal(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancelConnection = () => {
+    setShowConfirmModal(false);
+    setPreviewData(null);
+  };
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  if (!isLoaded || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-xl">
+          <ExclamationTriangleIcon className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Harap Masuk</h2>
+          <p className="text-gray-600 mb-6">Silakan masuk untuk mengakses pendaftaran BerkomunitasPlus.</p>
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Masuk
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Already connected view
+  if (connectionStatus?.is_connected) {
+    const connection = connectionStatus.connection;
+    const statusConfig = {
+      verified: {
+        icon: CheckCircleIcon,
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
+        title: 'Terverifikasi & Aktif!',
+        description: 'Akun Beauty Consultant Anda terhubung dan terverifikasi.'
+      },
+      pending: {
+        icon: ClockIcon,
+        color: 'text-yellow-600',
+        bgColor: 'bg-yellow-50',
+        borderColor: 'border-yellow-200',
+        title: 'Verifikasi Tertunda',
+        description: 'Permintaan koneksi Anda menunggu verifikasi manual oleh tim kami.'
+      },
+      rejected: {
+        icon: ExclamationTriangleIcon,
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200',
+        title: 'Koneksi Ditolak',
+        description: 'Permintaan koneksi Anda ditolak. Silakan hubungi dukungan untuk bantuan.'
+      }
+    };
+
+    const config = statusConfig[connection.verification_status] || statusConfig.pending;
+    const StatusIcon = config.icon;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <span className="text-2xl mr-2">👑</span>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                BerkomunitasPlus
+              </h1>
+            </div>
+            <p className="text-gray-600">Program Beauty Consultant DRW Skincare</p>
+          </div>
+
+          {/* Connection Status */}
+          <div className={`${config.bgColor} ${config.borderColor} border-2 rounded-2xl p-8 mb-8`}>
+            <div className="flex items-center justify-center mb-6">
+              <StatusIcon className={`h-16 w-16 ${config.color}`} />
+            </div>
+            
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{config.title}</h2>
+              <p className="text-gray-600">{config.description}</p>
+            </div>
+
+            {/* Connection Details */}
+            <div className="bg-white rounded-xl p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nama Beauty Consultant</label>
+                  <p className="text-lg font-semibold text-gray-900">{connection.bc_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+                  <p className="text-lg text-gray-900">{connection.bc_phone || connection.bc_whatsapp || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
+                  <p className="text-lg text-gray-900">{connection.bc_level || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+                  <p className="text-lg text-gray-900">{connection.bc_area || 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>Terhubung pada: {new Date(connection.created_at).toLocaleDateString('id-ID')}</span>
+                  {connection.verified_at && (
+                    <span>Diverifikasi pada: {new Date(connection.verified_at).toLocaleDateString('id-ID')}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Current Privilege Status */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <span className="text-2xl mr-2">🛡️</span>
+              <span className="text-xl font-semibold text-gray-900">
+                Status Saat Ini: {connectionStatus.current_privilege === 'berkomunitasplus' ? 'Member BerkomunitasPlus' : connectionStatus.current_privilege}
+              </span>
+            </div>
+            
+            {connectionStatus.current_privilege === 'berkomunitasplus' && (
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4">
+                <div className="flex items-center justify-center mb-2">
+                  <span className="text-xl mr-2">✨</span>
+                  <span className="font-semibold text-yellow-800">Manfaat Premium Aktif!</span>
+                </div>
+                <p className="text-sm text-yellow-700">
+                  Anda sekarang memiliki akses ke rewards dan fitur eksklusif BerkomunitasPlus.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-6">
+              <button
+                onClick={() => router.push('/profil')}
+                className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors mr-4"
+              >
+                Lihat Profil
+              </button>
+              <button
+                onClick={() => router.push('/rewards')}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Jelajahi Rewards
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Registration/Connection form view
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <span className="text-2xl mr-2">👑</span>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+              Bergabung BerkomunitasPlus
+            </h1>
+          </div>
+          <p className="text-gray-600 text-lg">
+            Hubungkan akun Beauty Consultant DRW Skincare Anda untuk membuka manfaat eksklusif
+          </p>
+        </div>
+
+        {/* Benefits Overview */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Manfaat BerkomunitasPlus</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">✨</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Rewards Eksklusif</h3>
+              <p className="text-sm text-gray-600">Akses rewards premium dan penawaran khusus</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">👑</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Dukungan Prioritas</h3>
+              <p className="text-sm text-gray-600">Dapatkan bantuan dan dukungan prioritas</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="bg-gradient-to-br from-green-400 to-teal-500 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🛡️</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Status Terverifikasi</h3>
+              <p className="text-sm text-gray-600">Badge Beauty Consultant terverifikasi</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Connection Form */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200">
+            <nav className="flex">
+              <button
+                onClick={() => setActiveTab('connect')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                  activeTab === 'connect'
+                    ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <LinkIcon className="h-5 w-5 inline mr-2" />
+                Hubungkan Akun yang Ada
+              </button>
+              <button
+                onClick={() => setActiveTab('register')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                  activeTab === 'register'
+                    ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <UserPlusIcon className="h-5 w-5 inline mr-2" />
+                Pendaftaran Baru
+              </button>
+            </nav>
+          </div>
+
+          <div className="p-8">
+            {activeTab === 'connect' ? (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Hubungkan Akun Beauty Consultant Anda</h2>
+                <p className="text-gray-600 mb-6">
+                  Sudah menjadi Beauty Consultant DRW Skincare? Hubungkan akun yang ada untuk mengaktifkan manfaat BerkomunitasPlus.
+                </p>
+
+                <form onSubmit={handleConnect} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ID Beauty Consultant *
+                    </label>
+                    <input
+                      type="text"
+                      name="reseller_id"
+                      value={formData.reseller_id}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan angka ID saja (contoh: 28801023072015)"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Masukkan angka ID Beauty Consultant tanpa tanda hubung (-)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nomor Telepon (WhatsApp) *
+                    </label>
+                    <input
+                      type="tel"
+                      name="input_phone"
+                      value={formData.input_phone}
+                      onChange={handleInputChange}
+                      placeholder="08xxxxxxxxx"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Masukkan nomor telepon yang terdaftar di akun Beauty Consultant Anda
+                    </p>
+                  </div>
+
+                  {message && (
+                    <div className={`p-4 rounded-lg ${
+                      message.type === 'success' 
+                        ? 'bg-green-50 text-green-800 border border-green-200' 
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
+                      <p className="font-medium">{message.text}</p>
+                      {message.details && message.type === 'success' && (
+                        <div className="mt-2 text-sm">
+                          <p>✓ Terhubung ke: {message.details.bc_name}</p>
+                          <p>✓ Status: {message.details.verification_status}</p>
+                          {message.details.auto_verified && (
+                            <p className="font-semibold text-green-700 mt-2">
+                              🎉 Verifikasi otomatis berhasil! BerkomunitasPlus diaktifkan!
+                            </p>
+                          )}
+                          {message.details.privilege_updated && (
+                            <p className="font-semibold text-blue-700 mt-1">
+                              ✨ Hak istimewa BerkomunitasPlus diberikan!
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !formData.reseller_id || !formData.input_phone}
+                    className="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {submitting ? 'Menghubungkan...' : 'Hubungkan Akun'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Daftar sebagai Beauty Consultant Baru</h2>
+                <p className="text-gray-600 mb-6">
+                  Baru di DRW Skincare? Daftar untuk menjadi Beauty Consultant dan bergabung dengan BerkomunitasPlus.
+                </p>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                  <div className="text-blue-600 mb-4">
+                    <UserPlusIcon className="h-12 w-12 mx-auto" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-blue-900 mb-2">Pendaftaran Segera Hadir</h3>
+                  <p className="text-blue-700 mb-4">
+                    Kami sedang mempersiapkan proses pendaftaran untuk Beauty Consultant baru. 
+                    Sementara itu, Anda dapat menghubungi kami langsung untuk memulai perjalanan Anda.
+                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-blue-600">
+                      <strong>WhatsApp:</strong> +62 812-3456-7890
+                    </p>
+                    <p className="text-sm text-blue-600">
+                      <strong>Email:</strong> consultant@drwskincare.com
+                    </p>
+                  </div>
+                  <button className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    Hubungi Kami
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mt-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Pertanyaan yang Sering Diajukan</h2>
+          
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">Apa itu BerkomunitasPlus?</h3>
+              <p className="text-gray-600">
+                BerkomunitasPlus adalah program keanggotaan premium kami untuk Beauty Consultant DRW Skincare yang terverifikasi, 
+                menawarkan rewards eksklusif, dukungan prioritas, dan hak istimewa khusus.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">Bagaimana cara kerja verifikasi?</h3>
+              <p className="text-gray-600">
+                Jika nomor telepon Anda cocok dengan database Beauty Consultant kami, Anda akan diverifikasi secara otomatis. 
+                Jika tidak, tim kami akan memverifikasi akun Anda secara manual dalam 1-2 hari kerja.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">Di mana saya bisa menemukan ID Beauty Consultant saya?</h3>
+              <p className="text-gray-600">
+                ID Beauty Consultant Anda diberikan saat pertama kali mendaftar sebagai konsultan. 
+                Periksa email konfirmasi pendaftaran Anda atau hubungi dukungan untuk bantuan.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Modal Konfirmasi */}
+    {showConfirmModal && previewData && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
+          <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">
+            Konfirmasi Koneksi Beauty Consultant
+          </h3>
+          
+          <div className="space-y-4 mb-6">
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 mb-2">Anda akan terhubung dengan akun:</p>
+              
+              <div className="space-y-2">
+                <div>
+                  <span className="text-sm font-medium text-gray-700">ID Reseller: </span>
+                  <span className="font-mono text-sm">****{previewData.resellerId.slice(-5)}</span>
+                </div>
+                
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Nama: </span>
+                  <span className="font-medium">{previewData.nama_preview}</span>
+                </div>
+                
+                {previewData.area && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Area: </span>
+                    <span className="text-sm">{previewData.area}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-600 text-center">
+              Apakah data di atas sudah benar?
+            </p>
+          </div>
+          
+          <div className="flex space-x-3">
+            <button
+              onClick={handleCancelConnection}
+              className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              disabled={submitting}
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleConfirmConnection}
+              className="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              disabled={submitting}
+            >
+              {submitting ? 'Menghubungkan...' : 'Ya, Hubungkan'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+  );
+}

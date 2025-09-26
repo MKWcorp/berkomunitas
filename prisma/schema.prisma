@@ -1,0 +1,679 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+  engineType      = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SocialLink {
+  id       Int    @id @default(autoincrement())
+  url      String
+  memberId Int
+}
+
+model badges {
+  id             Int             @id @default(autoincrement())
+  badge_name     String          @unique @db.VarChar(100)
+  description    String?
+  criteria_type  String          @db.VarChar(50)
+  criteria_value Int
+  badge_color    String?         @default("blue") @db.VarChar(20)
+  badge_style    String?         @default("flat") @db.VarChar(20)
+  badge_message  String?         @default("Achievement") @db.VarChar(50)
+  member_badges  member_badges[]
+}
+
+model bc_drwskincare_api {
+  id                           String                         @id
+  city                         String?
+  bio                          String?
+  createdAt                    DateTime                       @default(now()) @db.Timestamp(6)
+  updatedAt                    DateTime                       @db.Timestamp(6)
+  resellerId                   String                         @unique
+  email_address                String?
+  photo_url                    String?
+  whatsapp_number              String?
+  alamat                       String?
+  apiData                      Json?
+  area                         String?
+  bank                         String?
+  facebook                     String?
+  instagram                    String?
+  kabupaten                    String?
+  kecamatan                    String?
+  level                        String?
+  nama_reseller                String?
+  nomor_hp                     String?
+  provinsi                     String?
+  rekening                     String?
+  last_user_update             DateTime?                      @db.Timestamptz(6)
+  last_api_sync_at             DateTime?                      @db.Timestamptz(6)
+  nomorHp                      String?
+  apiResellerId                String
+  joinDate                     DateTime                       @default(now()) @db.Timestamp(6)
+  bc_drwskincare_plus          bc_drwskincare_plus?
+  bc_drwskincare_plus_verified bc_drwskincare_plus_verified[]
+}
+
+model bc_drwskincare_plus {
+  id                           Int                           @id @default(autoincrement())
+  member_id                    Int                           @unique
+  reseller_id                  String                        @unique
+  input_phone                  String?
+  verification_status          String                        @default("pending")
+  verified_at                  DateTime?                     @db.Timestamptz(6)
+  created_at                   DateTime                      @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime                      @updatedAt @db.Timestamptz(6)
+  member                       members                       @relation(fields: [member_id], references: [id])
+  bc_drwskincare_api           bc_drwskincare_api            @relation(fields: [reseller_id], references: [resellerId])
+  bc_drwskincare_plus_verified bc_drwskincare_plus_verified?
+
+  @@index([member_id], map: "idx_bc_drwskincare_plus_member")
+  @@index([reseller_id], map: "idx_bc_drwskincare_plus_reseller")
+}
+
+model coin_history {
+  id         Int       @id @default(autoincrement())
+  member_id  Int
+  event      String
+  coin       Int
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  comment_id Int?
+  event_type String    @default("manual")
+  task_id    Int?
+  members    members   @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_coin_history_created_at")
+  @@index([event_type], map: "idx_coin_history_event_type")
+  @@index([member_id], map: "idx_coin_history_member_id")
+}
+
+model comments {
+  id                  Int       @id @default(autoincrement())
+  comment_id          String    @unique
+  permalink           String?
+  post_timestamp      DateTime? @db.Timestamptz(6)
+  comment_timestamp   DateTime? @db.Timestamptz(6)
+  username            String?   @db.VarChar(255)
+  comment             String?
+  source_profile_link String?
+  platform            String?   @db.VarChar(50)
+  id_task             Int?
+  id_member           Int?
+  is_reply            Boolean?  @default(false)
+  parent_comment_id   String?   @db.VarChar(255)
+  partner_name        String?   @db.VarChar(255)
+  partner_id          String?   @db.VarChar(100)
+  submission_id       Int?
+
+  @@unique([comment_id, partner_id], map: "comments_comment_partner_unique")
+  @@index([partner_id], map: "idx_comments_partner_id")
+  @@index([partner_name, comment_timestamp(sort: Desc)], map: "idx_comments_partner_timestamp")
+}
+
+model event_settings {
+  setting_name  String    @id @db.VarChar(100)
+  setting_value String?
+  description   String?
+  start_date    DateTime? @db.Timestamptz(6)
+  end_date      DateTime? @db.Timestamptz(6)
+}
+
+model facebook_comments {
+  id                      Int                 @id @default(autoincrement())
+  comment_id              String              @unique @db.VarChar(100)
+  post_id                 String?             @db.VarChar(100)
+  facebook_page_id        String?             @db.VarChar(50)
+  parent_comment_id       String?             @db.VarChar(100)
+  is_reply                Boolean?            @default(false)
+  comment_text            String
+  comment_message         String?
+  commenter_id            String?             @db.VarChar(100)
+  commenter_name          String?             @db.VarChar(255)
+  commenter_username      String?             @db.VarChar(255)
+  commenter_profile_link  String?             @db.VarChar(500)
+  created_time            DateTime            @db.Timestamp(6)
+  likes_count             Int?                @default(0)
+  replies_count           Int?                @default(0)
+  is_hidden               Boolean?            @default(false)
+  can_remove              Boolean?            @default(false)
+  can_hide                Boolean?            @default(false)
+  can_reply_privately     Boolean?            @default(false)
+  platform                String?             @default("facebook") @db.VarChar(20)
+  created_at              DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?           @default(now()) @db.Timestamp(6)
+  facebook_pages          facebook_pages?     @relation(fields: [facebook_page_id], references: [facebook_page_id], onDelete: NoAction, onUpdate: NoAction)
+  facebook_comments       facebook_comments?  @relation("facebook_commentsTofacebook_comments", fields: [parent_comment_id], references: [comment_id], onDelete: NoAction, onUpdate: NoAction)
+  other_facebook_comments facebook_comments[] @relation("facebook_commentsTofacebook_comments")
+  facebook_posts          facebook_posts?     @relation(fields: [post_id], references: [post_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model facebook_execution_log {
+  id                       Int       @id @default(autoincrement())
+  execution_id             String    @unique @db.VarChar(100)
+  started_at               DateTime? @default(now()) @db.Timestamp(6)
+  completed_at             DateTime? @db.Timestamp(6)
+  total_pages_processed    Int?
+  total_posts_processed    Int?
+  total_comments_harvested Int?
+  status                   String?   @default("running") @db.VarChar(20)
+  error_message            String?
+  processing_summary       Json?
+}
+
+model facebook_pages {
+  id                   Int                 @id @default(autoincrement())
+  facebook_page_id     String              @unique @db.VarChar(255)
+  facebook_page_name   String?
+  page_access_token    String?
+  priority             String?             @default("medium") @db.VarChar(50)
+  max_posts_limit      Int?                @default(50)
+  processing_order     Int?
+  discovered_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  page_name            String?             @db.VarChar(255)
+  page_username        String?             @db.VarChar(255)
+  page_category        String?             @db.VarChar(100)
+  page_followers_count Int?
+  page_likes_count     Int?
+  page_link            String?             @db.VarChar(500)
+  is_active            Boolean?            @default(true)
+  last_processed       DateTime?           @db.Timestamptz(6)
+  created_at           DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?           @default(now()) @db.Timestamptz(6)
+  facebook_comments    facebook_comments[]
+  facebook_posts       facebook_posts[]
+}
+
+model facebook_posts {
+  id                           Int                 @id @default(autoincrement())
+  post_id                      String              @unique @db.VarChar(100)
+  facebook_page_id             String?             @db.VarChar(50)
+  post_type                    String?             @db.VarChar(20)
+  post_message                 String?
+  post_story                   String?
+  post_link                    String?             @db.VarChar(1000)
+  permalink                    String              @db.VarChar(1000)
+  created_time                 DateTime            @db.Timestamp(6)
+  updated_time                 DateTime?           @db.Timestamp(6)
+  likes_count                  Int?                @default(0)
+  comments_count               Int?                @default(0)
+  shares_count                 Int?                @default(0)
+  reactions_total              Int?                @default(0)
+  reactions_like               Int?                @default(0)
+  reactions_love               Int?                @default(0)
+  reactions_wow                Int?                @default(0)
+  reactions_haha               Int?                @default(0)
+  reactions_sad                Int?                @default(0)
+  reactions_angry              Int?                @default(0)
+  is_published                 Boolean?            @default(true)
+  privacy_value                String?             @db.VarChar(20)
+  created_at                   DateTime?           @default(now()) @db.Timestamp(6)
+  updated_workflow_comments_at DateTime?           @default(now()) @map("updated_workflow-comments_at") @db.Timestamp(6)
+  rekomendasi_tugas            String?
+  rekomendasi_keyword          String?             @db.VarChar(255)
+  facebook_comments            facebook_comments[]
+  facebook_pages               facebook_pages?     @relation(fields: [facebook_page_id], references: [facebook_page_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model facebook_task_submissions {
+  id                                       Int       @id @default(autoincrement())
+  id_task                                  Int?
+  id_member                                Int?
+  status_submission                        String?   @default("tersedia") @db.VarChar(50)
+  waktu_klik                               DateTime? @db.Timestamp(6)
+  waktu_verifikasi                         DateTime? @db.Timestamp(6)
+  admin_notes                              String?
+  comment_id                               Int?
+  isi_komentar                             String?
+  validation_status                        String?   @db.VarChar(50)
+  gagal_diverifikasi_verification_attempts Int?      @default(0)
+
+  @@unique([id_member, id_task], map: "facebook_task_submissions_unique_member_task")
+  @@index([status_submission], map: "idx_facebook_task_submissions_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model facebook_trigger_comment_queue {
+  id                  Int       @id(map: "trigger_comment_queue_pkey") @default(autoincrement())
+  status              String    @db.VarChar(20)
+  target_post_id      String    @db.VarChar(255)
+  target_post_caption String?
+  posted_comment_id_1 String?   @db.VarChar(255)
+  posted_comment_id_2 String?   @db.VarChar(255)
+  attempt_count       Int?      @default(0)
+  error_message       String?
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  processed_at        DateTime? @db.Timestamptz(6)
+}
+
+model facebook_tugas_ai {
+  id                    Int       @id @default(autoincrement())
+  facebook_post_url     String
+  task_type             String?   @db.VarChar(50)
+  page_id               String?   @db.VarChar(255)
+  status                String?   @default("tersedia") @db.VarChar(50)
+  point_value           Int?      @default(10)
+  created_time          DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime? @db.Timestamptz(6)
+  rekomendasi_tugas     String?
+  rekomendasi_keyword   String?   @db.VarChar(255)
+  post_id               String?   @db.VarChar(100)
+  facebook_page_id      String?   @db.VarChar(255)
+  minimum_kata_komentar Int?      @default(5)
+}
+
+model instagram_accounts {
+  id                     Int       @id @default(autoincrement())
+  ig_business_account_id String    @unique @db.VarChar(255)
+  ig_username            String?   @unique @db.VarChar(255)
+  ig_name                String?
+  ig_followers           Int?
+  profile_picture_url    String?
+  priority               String?   @default("medium") @db.VarChar(50)
+  max_posts_limit        Int?      @default(50)
+  processing_order       Int?
+  discovered_at          DateTime? @default(now()) @db.Timestamptz(6)
+  facebook_page_id       String?   @db.VarChar(255)
+  page_access_token      String?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model instagram_master_config {
+  id                      Int
+  master_access_token     String
+  discovery_enabled       Boolean?  @default(true)
+  last_discovery          DateTime? @db.Timestamp(6)
+  total_ig_accounts_found Int?
+  status                  String?   @default("active") @db.VarChar(20)
+  created_at              DateTime? @default(now()) @db.Timestamp(6)
+
+  @@ignore
+}
+
+model levels {
+  level_number    Int    @id
+  level_name      String @db.VarChar(100)
+  required_points Int    @unique
+}
+
+model loyalty_point_history {
+  id         Int      @id @default(autoincrement())
+  member_id  Int
+  event      String
+  point      Int
+  created_at DateTime @default(now())
+  comment_id Int?
+  event_type String?  @db.VarChar(50)
+  task_id    Int?
+  members    members  @relation(fields: [member_id], references: [id])
+}
+
+model loyalty_point_rules {
+  event_type  String  @id @db.VarChar(50)
+  description String?
+  point_value Int
+}
+
+model media {
+  id                  String
+  caption             String?
+  timestamp           DateTime  @db.Timestamptz(6)
+  permalink           String?   @unique(map: "idx_media_permalink_unique")
+  post_timestamp      DateTime? @db.Timestamptz(6)
+  source_profile_link String?
+  platform            String?   @db.VarChar(50)
+  rekomendasi_task    String?
+  rekomendasi_keyword String?
+  ai_status           String?
+  ai_attempts         Int?      @default(0)
+  caption_hash        String?
+  ai_updated_at       DateTime? @db.Timestamptz(6)
+  ai_model            String?
+  ig_media_id         String    @id @unique(map: "idx_media_ig_media_id")
+  tugas_ai            tugas_ai?
+
+  @@index([ai_status], map: "idx_media_ai_status")
+  @@index([source_profile_link, post_timestamp(sort: Desc)], map: "idx_media_profile_time")
+}
+
+model member_badges {
+  id        Int       @id @default(autoincrement())
+  id_member Int
+  id_badge  Int
+  earned_at DateTime? @default(now()) @db.Timestamptz(6)
+  badges    badges    @relation(fields: [id_badge], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_badge")
+  members   members   @relation(fields: [id_member], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_member")
+
+  @@unique([id_member, id_badge])
+}
+
+model member_emails {
+  id         Int      @id @default(autoincrement())
+  clerk_id   String   @db.VarChar(255)
+  email      String   @unique @db.VarChar(255)
+  is_primary Boolean? @default(false)
+  verified   Boolean? @default(false)
+  members    members  @relation(fields: [clerk_id], references: [clerk_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_clerk_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model member_task_stats {
+  member_id       Int      @id
+  total_tasks     Int      @default(0)
+  completed_tasks Int      @default(0)
+  pending_tasks   Int      @default(0)
+  failed_tasks    Int      @default(0)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  members         members  @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_member_task_stats_member")
+
+  @@index([updated_at], map: "idx_member_task_stats_updated_at")
+}
+
+model member_transactions {
+  id                     Int               @id @default(autoincrement())
+  member_id              Int
+  transaction_type_id    Int
+  loyalty_amount         Int?              @default(0)
+  coin_amount            Int?              @default(0)
+  description            String?
+  reference_table        String?           @db.VarChar(50)
+  reference_id           Int?
+  loyalty_balance_before Int?
+  loyalty_balance_after  Int?
+  coin_balance_before    Int?
+  coin_balance_after     Int?
+  created_at             DateTime?         @default(now()) @db.Timestamp(6)
+  members                members           @relation(fields: [member_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transaction_types      transaction_types @relation(fields: [transaction_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_member_transactions_created_at")
+  @@index([member_id], map: "idx_member_transactions_member_id")
+  @@index([transaction_type_id], map: "idx_member_transactions_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model members {
+  id                                                              Int                     @id @default(autoincrement())
+  nama_lengkap                                                    String?
+  nomer_wa                                                        String?
+  tanggal_daftar                                                  DateTime?               @default(now()) @db.Timestamptz(6)
+  loyalty_point                                                   Int                     @default(0)
+  clerk_id                                                        String?                 @unique(map: "members_clerkId_key") @db.VarChar(255)
+  foto_profil_url                                                 String?
+  bio                                                             String?
+  status_kustom                                                   String?
+  featured_badge_id                                               String?
+  coin                                                            Int                     @default(0)
+  bc_drwskincare_plus                                             bc_drwskincare_plus?
+  coin_history                                                    coin_history[]
+  loyalty_point_history                                           loyalty_point_history[]
+  member_badges                                                   member_badges[]
+  member_emails                                                   member_emails[]
+  member_task_stats                                               member_task_stats?
+  member_transactions                                             member_transactions[]
+  notifications                                                   notifications[]
+  profil_sosial_media                                             profil_sosial_media[]
+  profile_wall_posts_profile_wall_posts_author_idTomembers        profile_wall_posts[]    @relation("profile_wall_posts_author_idTomembers")
+  profile_wall_posts_profile_wall_posts_profile_owner_idTomembers profile_wall_posts[]    @relation("profile_wall_posts_profile_owner_idTomembers")
+  reward_redemptions                                              reward_redemptions[]
+  task_submissions                                                task_submissions[]
+  user_privileges                                                 user_privileges[]
+  user_usernames                                                  user_usernames?
+
+  @@index([coin], map: "idx_members_coin")
+  @@index([loyalty_point], map: "idx_members_loyalty_point")
+}
+
+model notifications {
+  id         Int       @id @default(autoincrement())
+  id_member  Int
+  message    String
+  is_read    Boolean?  @default(false)
+  link_url   String?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  members    members   @relation(fields: [id_member], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_member")
+}
+
+model partners {
+  id                  Int       @id @default(autoincrement())
+  platform            String    @db.VarChar(50)
+  link_profil         String
+  tanggal_pendaftaran DateTime? @default(now()) @db.Timestamptz(6)
+  username            String    @unique @db.VarChar(100)
+  email               String?   @unique @db.VarChar(255)
+}
+
+model peringkat_member_comments {
+  peringkat         Int
+  username_sosmed   String    @id
+  nama_tampilan     String?
+  jumlah_komentar   Int
+  terakhir_diupdate DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model peringkat_member_loyalty {
+  peringkat           Int
+  id_member           Int       @id
+  nama_lengkap        String?
+  username_sosmed     String?
+  total_loyalty_point Int
+  terakhir_diupdate   DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model peringkat_sumber_tugas {
+  peringkat           Int       @id
+  source_profile_link String
+  jumlah_komentar     Int
+  terakhir_diupdate   DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model peringkat_tugas_populer {
+  peringkat         Int       @id
+  id_tugas          Int
+  keyword_tugas     String?
+  jumlah_pengerjaan Int
+  terakhir_diupdate DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model profil_sosial_media {
+  id               Int     @id @default(autoincrement())
+  id_member        Int
+  platform         String  @db.VarChar(50)
+  username_sosmed  String
+  profile_link     String?
+  platform_user_id String? @db.VarChar(255)
+  members          members @relation(fields: [id_member], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_member")
+
+  @@unique([id_member, platform, username_sosmed], map: "unique_member_platform_username")
+}
+
+model profile_wall_posts {
+  id                                                   Int       @id @default(autoincrement())
+  profile_owner_id                                     Int
+  author_id                                            Int
+  message                                              String
+  created_at                                           DateTime? @default(now()) @db.Timestamptz(6)
+  members_profile_wall_posts_author_idTomembers        members   @relation("profile_wall_posts_author_idTomembers", fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_author")
+  members_profile_wall_posts_profile_owner_idTomembers members   @relation("profile_wall_posts_profile_owner_idTomembers", fields: [profile_owner_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_profile_owner")
+}
+
+model reward_categories {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?
+  icon        String?   @db.VarChar(50)
+  color       String?   @default("blue") @db.VarChar(20)
+  sort_order  Int?      @default(0)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  rewards     rewards[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model reward_redemptions {
+  id               Int       @id @default(autoincrement())
+  id_member        Int
+  id_reward        Int
+  points_spent     Int
+  redeemed_at      DateTime? @default(now()) @db.Timestamptz(6)
+  status           String?   @default("menunggu_verifikasi") @db.VarChar(50)
+  shipping_notes   String?
+  shipping_method  String?   @default("separate") @db.VarChar(50)
+  shipped_at       DateTime? @db.Timestamp(6)
+  delivered_at     DateTime? @db.Timestamp(6)
+  shipping_cost    Int?      @default(0)
+  redemption_notes String?
+  quantity         Int       @default(1)
+  members          members   @relation(fields: [id_member], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_member")
+  rewards          rewards   @relation(fields: [id_reward], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reward")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model rewards {
+  id                    Int                  @id @default(autoincrement())
+  reward_name           String               @db.VarChar(255)
+  description           String?
+  point_cost            Int
+  stock                 Int?                 @default(0)
+  is_active             Boolean?             @default(true)
+  created_at            DateTime?            @default(now()) @db.Timestamptz(6)
+  foto_url              String?
+  required_privilege    String?              @db.VarChar(50)
+  privilege_description String?
+  is_exclusive          Boolean?             @default(false)
+  category_id           Int?
+  reward_redemptions    reward_redemptions[]
+  reward_categories     reward_categories?   @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([category_id], map: "idx_rewards_category")
+  @@index([required_privilege], map: "idx_rewards_privilege")
+}
+
+model statistik_global {
+  nama_statistik    String    @id @db.VarChar(100)
+  nilai_statistik   BigInt
+  terakhir_diupdate DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model statistik_harian {
+  tanggal              DateTime @id @db.Date
+  total_komentar_baru  Int?     @default(0)
+  total_tugas_selesai  Int?     @default(0)
+  total_poin_diberikan Int?     @default(0)
+  total_member_baru    Int?     @default(0)
+}
+
+model system_logs {
+  id         Int       @id @default(autoincrement())
+  log_level  String?   @default("INFO") @db.VarChar(20)
+  source     String?   @db.VarChar(100)
+  message    String?
+  context    Json?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model task_submissions {
+  id                                       Int       @id @default(autoincrement())
+  id_task                                  Int
+  id_member                                Int
+  status_submission                        String    @default("tersedia") @db.VarChar(50)
+  waktu_klik                               DateTime? @db.Timestamp(6)
+  tanggal_submission                       DateTime? @default(now()) @db.Timestamp(6)
+  tanggal_verifikasi                       DateTime? @db.Timestamp(6)
+  admin_notes                              String?
+  comment_id                               Int?
+  verified_by                              String?   @db.VarChar(255)
+  batas_waktu                              DateTime? @db.Timestamp(6)
+  keterangan                               String?
+  validation_status                        String?   @db.VarChar(50)
+  scheduled_check_at                       DateTime? @db.Timestamptz(6)
+  gagal_diverifikasi_verification_attempts Int?      @default(0)
+  tugas_ai                                 tugas_ai  @relation(fields: [id_task], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_task_submissions_tugas_ai")
+  members                                  members   @relation(fields: [id_member], references: [id])
+
+  @@unique([id_member, id_task], map: "unique_member_task")
+  @@index([status_submission])
+}
+
+model transaction_types {
+  id                  Int                   @id @default(autoincrement())
+  type_code           String                @unique @db.VarChar(50)
+  name                String                @db.VarChar(100)
+  affects_loyalty     Boolean?              @default(true)
+  affects_coin        Boolean?              @default(true)
+  is_credit           Boolean?              @default(true)
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  member_transactions member_transactions[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tugas_ai {
+  id                  Int                @id @default(autoincrement())
+  keyword_tugas       String?            @db.VarChar(255)
+  deskripsi_tugas     String?
+  link_postingan      String?
+  status              String             @default("tersedia") @db.VarChar(50)
+  post_timestamp      DateTime           @default(now()) @db.Timestamptz(6)
+  media_id            String?            @unique(map: "uq_tugas_ai_media_id")
+  source_profile_link String?
+  point_value         Int?               @default(10)
+  created_at          DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?          @db.Timestamptz(6)
+  task_submissions    task_submissions[]
+  media               media?             @relation(fields: [media_id], references: [ig_media_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tugas_ai_to_media_final")
+}
+
+model user_privileges {
+  id         Int       @id @default(autoincrement())
+  privilege  String    @db.VarChar(50)
+  granted_at DateTime  @default(now()) @db.Timestamptz(6)
+  granted_by String?   @db.VarChar(255)
+  expires_at DateTime? @db.Timestamptz(6)
+  is_active  Boolean   @default(true)
+  clerk_id   String?   @db.VarChar(255)
+  members    members?  @relation(fields: [clerk_id], references: [clerk_id], onDelete: Cascade, map: "fk_user_privileges_members_clerkid")
+
+  @@index([privilege])
+}
+
+model user_usernames {
+  id           Int       @id @default(autoincrement())
+  member_id    Int       @unique
+  username     String    @unique @db.VarChar(50)
+  display_name String?   @db.VarChar(100)
+  is_custom    Boolean?  @default(false)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  members      members   @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_username_member")
+}
+
+model bc_drwskincare_plus_verified {
+  id                  Int                  @id @default(autoincrement())
+  api_data_id         String?
+  connection_id       Int?                 @unique(map: "idx_bc_drwskincare_plus_verified_connection_id")
+  nama                String               @db.VarChar(255)
+  nomor_hp            String?              @db.VarChar(20)
+  instagram_link      String?              @db.VarChar(100)
+  facebook_link       String?              @db.VarChar(100)
+  tiktok_link         String?              @db.VarChar(100)
+  area                String?
+  created_at          DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?            @default(now()) @db.Timestamptz(6)
+  desa                String?              @db.VarChar(255)
+  kecamatan           String?              @db.VarChar(255)
+  kabupaten           String?              @db.VarChar(255)
+  propinsi            String?              @db.VarChar(255)
+  kode_pos            String?              @db.VarChar(10)
+  alamat_detail       String?              @db.Text
+  bc_drwskincare_api  bc_drwskincare_api?  @relation(fields: [api_data_id], references: [id], onUpdate: NoAction)
+  bc_drwskincare_plus bc_drwskincare_plus? @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([api_data_id], map: "idx_bc_drwskincare_plus_verified_api_data_id")
+  @@index([created_at], map: "idx_bc_drwskincare_plus_verified_created_at")
+}

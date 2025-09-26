@@ -1,0 +1,309 @@
+{
+  "name": "BACKUP - Coin-Loyalty Point Sync System (NOT USED)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "webhookId": "coin-loyalty-sync",
+        "httpMethod": "POST"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "action-type-check",
+              "leftValue": "={{ $json.action_type }}",
+              "rightValue": "loyalty_point_added",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-action-type",
+      "name": "Check Action Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE members SET coin = coin + {{ $json.points_added }} WHERE id = {{ $json.member_id }}",
+        "options": {}
+      },
+      "id": "sync-coin-increase",
+      "name": "Sync Coin Increase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 220],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "redemption-check",
+              "leftValue": "={{ $json.action_type }}",
+              "rightValue": "coin_redemption",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-redemption",
+      "name": "Check Redemption",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 380]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE members SET coin = coin - {{ $json.coins_spent }} WHERE id = {{ $json.member_id }} AND coin >= {{ $json.coins_spent }}",
+        "options": {}
+      },
+      "id": "process-coin-redemption",
+      "name": "Process Coin Redemption",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 380],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, nama_lengkap, loyalty_point, coin, (loyalty_point - coin) as difference FROM members WHERE loyalty_point != coin",
+        "options": {}
+      },
+      "id": "validate-consistency",
+      "name": "Validate Consistency",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "inconsistency-detected",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-inconsistency",
+      "name": "Check Inconsistency",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "system@drwcorp.com",
+        "toEmail": "admin@drwcorp.com",
+        "subject": "🚨 Coin-Loyalty Sync Alert",
+        "text": "Inconsistency detected in coin-loyalty system:\n\n{{ JSON.stringify($json, null, 2) }}",
+        "options": {}
+      },
+      "id": "send-alert-email",
+      "name": "Send Alert Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1560, 220],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-main",
+          "name": "SMTP Email"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+        "jsonParameters": true,
+        "bodyParametersJson": {
+          "text": "🚨 Coin-Loyalty Sync Issue Detected",
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Inconsistency Alert*\nFound {{ $json.length }} members with coin ≠ loyalty_point"
+              }
+            },
+            {
+              "type": "context",
+              "elements": [
+                {
+                  "type": "mrkdwn",
+                  "text": "Time: {{ $now.toISOString() }}"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-slack-notification",
+      "name": "Send Slack Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 380]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "check-action-type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-action-type": {
+      "main": [
+        [
+          {
+            "node": "sync-coin-increase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "check-redemption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sync-coin-increase": {
+      "main": [
+        [
+          {
+            "node": "validate-consistency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-redemption": {
+      "main": [
+        [
+          {
+            "node": "process-coin-redemption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "process-coin-redemption": {
+      "main": [
+        [
+          {
+            "node": "validate-consistency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validate-consistency": {
+      "main": [
+        [
+          {
+            "node": "check-inconsistency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-inconsistency": {
+      "main": [
+        [
+          {
+            "node": "send-alert-email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "send-slack-notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {},
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-09-12T10:00:00.000Z",
+  "versionId": "1"
+}

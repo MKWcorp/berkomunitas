@@ -1,0 +1,197 @@
+{
+  "name": "CEK KOMENTAR 2 JAM DEADLINE - FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "4a7f7831-77d7-44d5-8ced-c842bfd479db",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "20d92a37-d89c-4afe-b695-8e529ba64dfa",
+      "name": "Webhook",
+      "webhookId": "4a7f7831-77d7-44d5-8ced-c842bfd479db"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insert or update task submission\nINSERT INTO task_submissions (id_member, id_task, status_submission, waktu_klik)\nVALUES ({{ $json.query.memberId }}, {{ $json.query.taskId }}, 'sedang_verifikasi', NOW())\nON CONFLICT ON CONSTRAINT unique_member_task \nDO UPDATE SET \n    status_submission = 'sedang_verifikasi',\n    waktu_klik = NOW()\nWHERE task_submissions.status_submission IN ('tersedia', 'gagal_diverifikasi')\nRETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "9e3559ba-0820-47ca-98ba-62bfac9a8e45",
+      "name": "Create Task Submission",
+      "credentials": {
+        "postgres": {
+          "id": "vwgs8WkktUj1PmrD",
+          "name": "comment_db_beecommunity"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Get task details\nSELECT \n  id,\n  nama_tugas,\n  link_postingan,\n  point_value,\n  deskripsi_tugas\nFROM tugas_ai \nWHERE id = {{ $('Webhook').item.json.query.taskId }} \nAND status = 'tersedia';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        144,
+        0
+      ],
+      "id": "46f825af-7357-4f13-afef-1a9cd741d959",
+      "name": "Get Task Details",
+      "credentials": {
+        "postgres": {
+          "id": "vwgs8WkktUj1PmrD",
+          "name": "comment_db_beecommunity"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.link_postingan }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        368,
+        0
+      ],
+      "id": "check-task-exists",
+      "name": "Check Task Exists"
+    },
+    {
+      "parameters": {
+        "respondWith": "redirect",
+        "redirectURL": "={{ $json.link_postingan }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        592,
+        -100
+      ],
+      "id": "177d48fb-451d-47fd-ba03-3652620d7846",
+      "name": "Redirect to Post"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "❌ Error: Task tidak ditemukan atau tidak tersedia",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        592,
+        100
+      ],
+      "id": "error-response",
+      "name": "Error Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Task Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Task Submission": {
+      "main": [
+        [
+          {
+            "node": "Get Task Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Task Details": {
+      "main": [
+        [
+          {
+            "node": "Check Task Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Task Exists": {
+      "main": [
+        [
+          {
+            "node": "Redirect to Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "improved-version",
+  "meta": {
+    "instanceId": "a79696a8010a1a27613e18e1f22c8993651b36a38c9dc8f09f9b85bf36b83493"
+  },
+  "id": "vX4dHbgxYqQOqh8A-improved",
+  "tags": [
+    {
+      "createdAt": "2025-07-23T03:17:00.508Z",
+      "updatedAt": "2025-07-23T03:17:00.508Z",
+      "id": "W6gkJZIqLSUJgu0I",
+      "name": "berkomunitas.com"
+    }
+  ]
+}

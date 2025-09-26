@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Allow: /privacy-policy
+Allow: /faq
+Allow: /user-guide
+Allow: /leaderboard
+Allow: /tugas
+Allow: /profil
+
+# Disallow admin and API routes for security
+Disallow: /api/
+Disallow: /custom-dashboard/
+Disallow: /sign-in
+Disallow: /sign-up
+
+# Allow Meta/Facebook crawler specifically
+User-agent: facebookexternalhit/1.1
+Allow: /
+Allow: /privacy-policy
+
+User-agent: Facebot
+Allow: /
+Allow: /privacy-policy
+
+Sitemap: https://berkomunitas.com/sitemap.xml

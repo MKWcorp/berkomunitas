@@ -1,0 +1,16 @@
+# Backup files
+**/*backup*.js
+**/page-backup.js
+**/SocialMediaTab-backup.js
+**/figma-design*.js
+**/EmailManager.js.backup
+
+# Build and dependency directories
+node_modules/
+.next/
+out/
+dist/
+
+# Configuration and temporary files
+*.config.js
+.env*

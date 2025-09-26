@@ -1,0 +1,49 @@
+{
+  "functions": {
+    "src/app/api/**/*.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!_next|api|favicon.ico).*)",
+      "destination": "/admin-app/$1",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.berkomunitas.com"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "destination": "/admin-app",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.berkomunitas.com"
+        }
+      ]
+    },
+    {
+      "source": "/((?!_next|api|favicon.ico).*)",
+      "destination": "/rewards-app/$1",
+      "has": [
+        {
+          "type": "host",
+          "value": "rewards.berkomunitas.com"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "destination": "/rewards-app",
+      "has": [
+        {
+          "type": "host",
+          "value": "rewards.berkomunitas.com"
+        }
+      ]
+    }
+  ]
+}
