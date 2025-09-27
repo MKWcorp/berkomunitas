@@ -92,8 +92,8 @@ export default function NavigationMenu() {
       signedIn: true,
       hasDropdown: true,
       dropdownItems: [
-        { href: 'http://localhost:3000/custom-dashboard/drwcorp', label: 'Sololeveling' },
-        { href: 'http://localhost:3000/custom-dashboard/ranking', label: 'Jannawana' }
+        { href: '/custom-dashboard/drwcorp', label: 'Sololeveling' },
+        { href: '/custom-dashboard/ranking', label: 'Jannawana' }
       ]
     },
     { href: '/tugas', label: 'Tugas', icon: ClipboardDocumentListIcon, signedIn: true },

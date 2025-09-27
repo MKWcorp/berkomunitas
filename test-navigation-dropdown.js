@@ -21,8 +21,8 @@ console.log('   - Click anywhere closes mobile menu');
 console.log('');
 
 console.log('🎯 Sub Menu Links:');
-console.log('   • Jannawana → http://localhost:3000/custom-dashboard/ranking');
-console.log('   • Sololevel → http://localhost:3000/custom-dashboard/drwcorp');
+console.log('   • Jannawana → /custom-dashboard/ranking');
+console.log('   • Sololevel → /custom-dashboard/drwcorp');
 console.log('');
 
 console.log('💡 Features:');
