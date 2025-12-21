@@ -1,9 +1,6 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 // Helper function to mask email
 function maskEmail(email) {
   if (!email) return '';
@@ -77,7 +74,7 @@ function parseSocialMediaLink(link) {
 
 export async function POST(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -91,11 +88,16 @@ export async function POST(request) {
     const duplicates = [];
 
     // Check WhatsApp number duplication
-    if (nomer_wa) {
-      const existingWA = await prisma.members.findFirst({
+    if (nomer_wa) {      const existingWA = await prisma.members.findFirst({
         where: {
           nomer_wa: nomer_wa,
-          clerk_id: { not: userId } // Exclude current user
+          NOT: {
+            OR: [
+              { email: user.email },
+              { google_id: user.google_id },
+              user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+            ].filter(Boolean)
+          }
         },
         include: {
           member_emails: {
@@ -110,7 +112,7 @@ export async function POST(request) {
           type: 'whatsapp',
           data: nomer_wa,
           existing_user: {
-            clerk_id: existingWA.clerk_id,
+            google_id: existingWA.clerk_id,
             nama_lengkap: existingWA.nama_lengkap,
             masked_email: maskEmail(primaryEmail)
           }
@@ -122,13 +124,18 @@ export async function POST(request) {
     if (social_media_links.length > 0) {
       for (const link of social_media_links) {
         const parsed = parseSocialMediaLink(link);
-        if (parsed) {
-          const existingSocial = await prisma.profil_sosial_media.findFirst({
+        if (parsed) {          const existingSocial = await prisma.profil_sosial_media.findFirst({
             where: {
               platform: parsed.platform,
               username_sosmed: parsed.username,
               member: {
-                clerk_id: { not: userId } // Exclude current user
+                NOT: {
+                  OR: [
+                    { email: user.email },
+                    { google_id: user.google_id },
+                    user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+                  ].filter(Boolean)
+                }
               }
             },
             include: {
@@ -150,7 +157,7 @@ export async function POST(request) {
               username: parsed.username,
               data: link,
               existing_user: {
-                clerk_id: existingSocial.member.clerk_id,
+                google_id: existingSocial.member.clerk_id,
                 nama_lengkap: existingSocial.member.nama_lengkap,
                 masked_email: maskEmail(primaryEmail)
               }

@@ -6,8 +6,7 @@ async function createSampleNotifications() {
   try {
     // Get first user to create notifications for
     const firstUser = await prisma.members.findFirst({
-      where: {
-        clerk_id: { not: null }
+      where: { google_id: { not: null }
       }
     });
 

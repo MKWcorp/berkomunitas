@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import { MagnifyingGlassIcon, CalendarIcon, UserIcon, ChartBarIcon, CurrencyDollarIcon, ExclamationTriangleIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 import AdminLayout from '../components/AdminLayout';
@@ -8,7 +8,7 @@ import GlassCard from '../../components/GlassCard';
 import AdminModal from '../components/AdminModal';
 
 export default function CoinsPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const router = useRouter();
   
   const [history, setHistory] = useState([]);
@@ -61,7 +61,7 @@ export default function CoinsPage() {
   useEffect(() => {
     if (!isLoaded) return;
     
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       router.push('/sign-in');
       return;
     }
@@ -96,7 +96,7 @@ export default function CoinsPage() {
       if (filters.endDate) params.append('endDate', filters.endDate);
 
       const response = await fetch(`/api/admin/coins?${params}`, {
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
 
       if (response.ok) {
@@ -170,7 +170,7 @@ export default function CoinsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({
           member_id: selectedMember.id,

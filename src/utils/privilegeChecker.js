@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/utils/prisma';
 
 // Definisi hierarki privilege (semakin tinggi angka = semakin tinggi akses)
 const PRIVILEGE_HIERARCHY = {
@@ -27,8 +25,7 @@ export async function checkUserPrivileges(user_clerk_id) {
   try {
     // 1. Ambil privilege aktif dari database (hanya satu yang aktif)
     const userPrivilegeRecord = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: user_clerk_id,
+      where: { google_id: user_clerk_id,
         is_active: true,
         OR: [
           { expires_at: null },
@@ -231,8 +228,7 @@ export async function grantPrivilege(user_clerk_id, privilege, grantedBy = 'syst
   try {
     // Check if privilege already exists
     const existing = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: user_clerk_id,
+      where: { google_id: user_clerk_id,
         privilege: privilege
       }
     });
@@ -251,8 +247,7 @@ export async function grantPrivilege(user_clerk_id, privilege, grantedBy = 'syst
     } else {
       // Create new privilege
       await prisma.user_privileges.create({
-        data: {
-          clerk_id: user_clerk_id,
+        data: { google_id: user_clerk_id,
           privilege: privilege,
           granted_by: grantedBy,
           is_active: true
@@ -268,8 +263,7 @@ export async function grantPrivilege(user_clerk_id, privilege, grantedBy = 'syst
 export async function revokePrivilege(user_clerk_id, privilege) {
   try {
     await prisma.user_privileges.updateMany({
-      where: {
-        clerk_id: user_clerk_id, // Gunakan clerk_id sesuai schema yang baru
+      where: { google_id: user_clerk_id, // Gunakan clerk_id sesuai schema yang baru
         privilege: privilege
       },
       data: {

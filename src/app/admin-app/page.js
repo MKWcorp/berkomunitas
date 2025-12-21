@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, SignInButton } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { GlassContainer } from '@/components/GlassLayout';
 
 export default function AdminRootPage() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [checking, setChecking] = useState(false);
   const [adminCheckDone, setAdminCheckDone] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -24,7 +24,7 @@ export default function AdminRootPage() {
     if (!isLoaded || adminCheckDone) return;
     
     // If no user is signed in, don't proceed with admin check
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       console.log('✅ No authenticated user, showing login page');
       setAdminCheckDone(true);
       return; // Stay on this page to show login button
@@ -102,7 +102,7 @@ export default function AdminRootPage() {
   }
 
   // Show login button if not authenticated and check is done
-  if (adminCheckDone && !user?.primaryEmailAddress?.emailAddress) {
+  if (adminCheckDone && !user?.email) {
     console.log('🔐 Showing login page');
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -121,13 +121,13 @@ export default function AdminRootPage() {
               Silakan login untuk mengakses dashboard admin
             </p>
           </div>
-          
-          <div className="space-y-4">
-            <SignInButton mode="modal" redirectUrl="/admin-app">
-              <button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-4 px-8 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-lg">
-                🔐 Login Admin
-              </button>
-            </SignInButton>
+            <div className="space-y-4">
+            <button
+              onClick={() => window.location.href = '/login'}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-4 px-8 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-lg"
+            >
+              🔐 Login dengan Google
+            </button>
             
             {/* Alternative login method */}
             <div className="relative">
@@ -140,10 +140,10 @@ export default function AdminRootPage() {
             </div>
             
             <button 
-              onClick={() => window.location.href = 'https://berkomunitas.com/sign-in'}
+              onClick={() => window.location.href = '/'}
               className="w-full bg-gray-100 text-gray-700 font-semibold py-3 px-8 rounded-xl hover:bg-gray-200 transition-all duration-300 border border-gray-300"
             >
-              Login di Main Site
+              Kembali ke Beranda
             </button>
           </div>
           
@@ -164,7 +164,7 @@ export default function AdminRootPage() {
   }
 
   // Show error if user is authenticated but not admin and check is done
-  if (adminCheckDone && user?.primaryEmailAddress?.emailAddress && !isAdmin) {
+  if (adminCheckDone && user?.email && !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <GlassContainer className="p-8 text-center max-w-lg">
@@ -181,7 +181,7 @@ export default function AdminRootPage() {
             <div className="bg-blue-50 p-4 rounded-lg text-sm">
               <h3 className="font-bold text-blue-800 mb-2">📋 Info Debug:</h3>
               <p><strong>User ID:</strong> {user?.id || 'N/A'}</p>
-              <p><strong>Email:</strong> {user?.primaryEmailAddress?.emailAddress || 'N/A'}</p>
+              <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
               <p><strong>Expected Admin:</strong> drwcorpora@gmail.com (User ID 224)</p>
             </div>
             <div className="bg-yellow-50 p-4 rounded-lg text-sm mt-4">
@@ -221,7 +221,7 @@ export default function AdminRootPage() {
         <div className="text-left space-y-2 text-sm">
           <p><strong>Debug Info:</strong> {debugInfo}</p>
           <p><strong>isLoaded:</strong> {isLoaded ? 'Yes' : 'No'}</p>
-          <p><strong>User:</strong> {user?.primaryEmailAddress?.emailAddress || 'None'}</p>
+          <p><strong>User:</strong> {user?.email || 'None'}</p>
           <p><strong>adminCheckDone:</strong> {adminCheckDone ? 'Yes' : 'No'}</p>
           <p><strong>checking:</strong> {checking ? 'Yes' : 'No'}</p>
           <p><strong>isAdmin:</strong> {isAdmin ? 'Yes' : 'No'}</p>

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { 
@@ -238,7 +238,7 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
 }
 
 export default function SocialMediaPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const router = useRouter();
   const [socialMedias, setSocialMedias] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -250,7 +250,7 @@ export default function SocialMediaPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       router.push('/sign-in');
       return;
     }

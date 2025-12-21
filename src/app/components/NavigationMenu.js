@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useUser, SignedIn, SignedOut } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardDocumentListIcon,
@@ -18,7 +18,7 @@ import UserProfileDropdown from './UserProfileDropdown';
 // Custom Hook to check profile completeness
 function useProfileCompleteness() {
   const [isComplete, setIsComplete] = useState(true);
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useSSOUser();
 
   useEffect(() => {
     if (isSignedIn) {
@@ -37,7 +37,7 @@ function useProfileCompleteness() {
 }
 function useLoyaltyPoints() {
   const [points, setPoints] = useState({ loyalty_point: 0, coin: 0 });
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useSSOUser();
 
   useEffect(() => {
     if (isSignedIn) {
@@ -63,7 +63,7 @@ function useLoyaltyPoints() {
 export default function NavigationMenu() {
   const points = useLoyaltyPoints();
   const isProfileComplete = useProfileCompleteness();
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useSSOUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRankingDropdownOpen, setIsRankingDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -197,17 +197,18 @@ export default function NavigationMenu() {
                 <CurrencyDollarIcon className="w-6 h-6 text-green-500" />
                 <span className="font-semibold text-sm md:text-base">{points.coin}</span>
               </Link>
-              
-              <NotificationBell />
+                <NotificationBell />
               <UserProfileDropdown />
             </>
-          )}          <SignedOut>
-            <Link href="/sign-in" className="bg-gradient-to-r from-indigo-500/80 to-purple-600/80 hover:from-indigo-600/90 hover:to-purple-700/90 px-3 md:px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/25 backdrop-blur-sm border border-white/30 text-white">
+          )}
+          
+          {!isSignedIn && (
+            <Link href="/login" className="bg-gradient-to-r from-indigo-500/80 to-purple-600/80 hover:from-indigo-600/90 hover:to-purple-700/90 px-3 md:px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/25 backdrop-blur-sm border border-white/30 text-white">
               Login
             </Link>
-          </SignedOut>
+          )}
         </div>
-      </nav>      {/* Mobile menu */}
+      </nav>{/* Mobile menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white/10 backdrop-blur-lg px-2 pt-2 pb-3 space-y-1 border-t border-white/20">
           {filteredLinks.map(link => {

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   CurrencyDollarIcon, 
   ClockIcon,
@@ -13,7 +13,7 @@ import GlassCard from '../components/GlassCard';
 export default function CoinsPage() {
   const [coinHistory, setCoinHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
 
   useEffect(() => {
     const loadCoinsData = async () => {

@@ -1,8 +1,5 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 /**
  * GET /api/debug/leaderboard-photos
  * Debug endpoint to check leaderboard photo data

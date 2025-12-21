@@ -1,25 +1,25 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '@/utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/debug/profile-data
  * Debug endpoint to check user's profile data
  */
-export async function GET() {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Find member and their social media profiles with detailed data
     const member = await prisma.members.findUnique({
-      where: { clerk_id: userId },
+      where: { id: user.id },
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true,
+        google_id: true,
         profil_sosial_media: {
           select: {
             id: true,
@@ -34,7 +34,7 @@ export async function GET() {
     if (!member) {
       return NextResponse.json({ 
         error: 'Member not found',
-        clerk_id: userId
+        google_id: user.google_id
       });
     }
 
@@ -72,7 +72,7 @@ export async function GET() {
       member: {
         id: member.id,
         nama_lengkap: member.nama_lengkap,
-        clerk_id: member.clerk_id
+        google_id: member.clerk_id
       },
       profil_sosial_media_raw: member.profil_sosial_media,
       validation_checks: validationChecks,

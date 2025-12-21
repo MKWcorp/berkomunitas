@@ -8,11 +8,11 @@ import {
   ChatBubbleBottomCenterTextIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import GlassCard from '../../components/GlassCard';
 
 export default function DashboardTab() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,7 +20,7 @@ export default function DashboardTab() {
 
   useEffect(() => {
     const fetchDashboard = async () => {
-      if (!isLoaded || !user?.primaryEmailAddress?.emailAddress) {
+      if (!isLoaded || !user?.email) {
         setLoading(false);
         return;
       }
@@ -28,7 +28,7 @@ export default function DashboardTab() {
       try {
         const response = await fetch('/api/admin/dashboard', { 
           headers: { 
-            'x-user-email': user.primaryEmailAddress.emailAddress,
+            'x-user-email': user.email,
             'Cache-Control': 'no-cache'
           } 
         });

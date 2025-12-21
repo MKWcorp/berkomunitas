@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '@/utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
-export async function GET(_request) {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ 
         success: false, 
         isAdmin: false,
@@ -16,7 +16,7 @@ export async function GET(_request) {
     
     // Check if member exists
     const member = await prisma.members.findUnique({ 
-      where: { clerk_id: userId }
+      where: { id: user.id }
     });
     
     if (!member) {
@@ -29,8 +29,7 @@ export async function GET(_request) {
     
     // Check admin privileges
     const adminPriv = await prisma.user_privileges.findFirst({
-      where: { 
-        clerk_id: userId,
+      where: { member_id: user.id,
         privilege: 'admin', 
         is_active: true 
       }
@@ -44,7 +43,7 @@ export async function GET(_request) {
       member: {
         id: member._id,
         name: member.name,
-        clerk_id: member.clerk_id
+        google_id: member.clerk_id
       }
     });
     

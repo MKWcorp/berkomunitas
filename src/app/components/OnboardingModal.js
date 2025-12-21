@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from "@clerk/nextjs";
+import { useSSOUser } from '@/hooks/useSSOUser';
 
 export default function OnboardingModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const { user } = useUser();
+  const { user } = useSSOUser();
 
   const steps = [
     {

@@ -21,7 +21,7 @@ async function debugMemberBadges() {
           select: {
             id: true,
             nama_lengkap: true,
-            clerk_id: true
+            google_id: true
           }
         },
         badges: {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../lib/prisma';
-import { auth } from '@clerk/nextjs/server';
+import prisma from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
 
 /**
  * GET /api/tugas
@@ -13,8 +13,8 @@ import { auth } from '@clerk/nextjs/server';
  * - filter (optional): Filter by task status - 'semua', 'selesai', 'belum' (default: 'semua').
  */
 export async function GET(request) {
-  const { userId } = await auth();
-  if (!userId) {
+  const user = await getCurrentUser(request);
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -25,16 +25,22 @@ export async function GET(request) {
   const filter = searchParams.get('filter') || 'semua';
 
   try {
-    // Find the member based on the clerkId to get the internal database ID
-    const member = await prisma.members.findUnique({
-      where: { clerk_id: userId },
+    // Find the member based on email, google_id, or clerk_id
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
+      },
       select: { id: true },
     });
 
     if (!member) {
       return NextResponse.json({ success: false, error: 'Member not found' }, { status: 404 });
     }
-    const memberId = member.id;    const whereClause = {
+    const memberId = member.id;const whereClause = {
       status: 'tersedia',
       ...(search && {
         deskripsi_tugas: {

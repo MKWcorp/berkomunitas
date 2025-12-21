@@ -1,9 +1,25 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import GlassCard from './components/GlassCard';
+import { isLoggedIn, getCurrentUser } from '@/lib/sso';
 
 export default function HomePage() {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if user is logged in
+    if (isLoggedIn()) {
+      const currentUser = getCurrentUser();
+      setUser(currentUser);
+    }
+    setLoading(false);
+  }, []);
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden">
@@ -44,9 +60,7 @@ export default function HomePage() {
               <span className="text-yellow-300">
                 Raih Poin Loyalitas
               </span>
-            </h1>
-
-            {/* Sub-headline */}
+            </h1>            {/* Sub-headline */}
             <p className="text-base md:text-lg lg:text-xl text-white/90 mb-8 leading-relaxed drop-shadow-md max-w-md mx-auto lg:mx-0">
               Dapatkan poin loyalitas dengan mengerjakan tugas-tugas seru.
               Tukarkan poinmu dengan berbagai hadiah menarik.
@@ -54,6 +68,33 @@ export default function HomePage() {
 
             {/* CTA Buttons with Glass Effect */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center lg:justify-start">
+              {loading ? (
+                <div className="px-8 py-3 bg-white/20 backdrop-blur-md rounded-full text-white">
+                  Loading...
+                </div>
+              ) : user ? (
+                <Link 
+                  href="/profil"
+                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-full text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md text-center"
+                >
+                  Dashboard ({user.nama_lengkap || 'User'})
+                </Link>
+              ) : (
+                <>
+                  <Link 
+                    href="/login"
+                    className="px-8 py-3 bg-white hover:bg-white/90 rounded-full text-blue-600 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md text-center"
+                  >
+                    🚀 Mulai Sekarang
+                  </Link>
+                  <Link 
+                    href="/login"
+                    className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white font-semibold backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 text-center"
+                  >
+                    Login
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Version Info */}

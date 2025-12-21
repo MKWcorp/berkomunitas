@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import Image from 'next/image';
 import GlassCard from '../../components/GlassCard';
 import { 
@@ -14,7 +14,7 @@ import {
 
 export default function PublicProfilePage() {
   const { username } = useParams();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '../../../../utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // POST - Confirm connection and move data to verified table
 export async function POST(request) {
   console.log('🔥 CONFIRM ENDPOINT HIT');
   
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized - Please log in' },
         { status: 401 }
@@ -19,7 +19,7 @@ export async function POST(request) {
     // Get member data
     console.log('🔍 Looking for member with userId:', userId);
     const member = await prisma.members.findUnique({
-      where: { clerk_id: userId },
+      where: { id: user.id },
       select: { id: true, nama_lengkap: true }
     });
 
@@ -190,8 +190,7 @@ export async function POST(request) {
     
     // First find existing privilege record
     const existingPrivilege = await prisma.user_privileges.findFirst({
-      where: { 
-        clerk_id: userId,
+      where: { member_id: user.id,
         is_active: true 
       }
     });
@@ -208,8 +207,7 @@ export async function POST(request) {
     } else {
       // Create new privilege
       await prisma.user_privileges.create({
-        data: {
-          clerk_id: userId,
+        data: { google_id: user.google_id,
           privilege: 'berkomunitasplus',
           granted_at: new Date(),
           is_active: true

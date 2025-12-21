@@ -1,14 +1,11 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 // POST - Grant berkomunitasplus privilege (Admin only)
 export async function POST(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -74,8 +71,8 @@ export async function POST(request) {
 // DELETE - Revoke berkomunitasplus privilege (Admin only)
 export async function DELETE(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -129,8 +126,8 @@ export async function DELETE(request) {
 // GET - List users with berkomunitasplus privilege (Admin only)
 export async function GET(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

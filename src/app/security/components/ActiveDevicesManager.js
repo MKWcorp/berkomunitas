@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSessionList, useSession } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   DevicePhoneMobileIcon,
   ComputerDesktopIcon,
@@ -15,10 +15,40 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function ActiveDevicesManager() {
-  const { sessions, isLoaded } = useSessionList();
-  const { session: currentSession } = useSession();
+  const { user, isLoaded } = useSSOUser();
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState({});
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+
+  // Fetch SSO sessions
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+
+    const fetchSessions = async () => {
+      try {
+        setIsLoadingSessions(true);
+        const response = await fetch('/api/sso/sessions', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSessions(data.sessions || []);
+        } else {
+          console.error('Failed to fetch sessions');
+          setSessions([]);
+        }
+      } catch (error) {
+        console.error('Error fetching sessions:', error);
+        setSessions([]);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+
+    fetchSessions();
+  }, [isLoaded, user]);
 
   // Helper function to get device icon based on device type
   const getDeviceIcon = (deviceType) => {
@@ -104,7 +134,6 @@ export default function ActiveDevicesManager() {
       ip: latestActivity.ipAddress || 'Unknown'
     };
   };
-
   // Handle session revoke
   const handleSignOut = async (session) => {
     const sessionId = session.id;
@@ -112,11 +141,25 @@ export default function ActiveDevicesManager() {
     setMessage({ type: '', text: '' });
 
     try {
-      await session.revoke();
-      setMessage({ 
-        type: 'success', 
-        text: 'Perangkat berhasil dikeluarkan dari akun Anda' 
+      const response = await fetch('/api/sso/revoke-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ sessionId })
       });
+
+      if (response.ok) {
+        // Remove session from list
+        setSessions(prev => prev.filter(s => s.id !== sessionId));
+        setMessage({ 
+          type: 'success', 
+          text: 'Perangkat berhasil dikeluarkan dari akun Anda' 
+        });
+      } else {
+        throw new Error('Failed to revoke session');
+      }
     } catch (error) {
       console.error('Session revoke error:', error);
       setMessage({ 
@@ -130,8 +173,8 @@ export default function ActiveDevicesManager() {
 
   // Confirm sign out
   const confirmSignOut = (session) => {
-    const isCurrentSession = session.id === currentSession?.id;
-    const deviceInfo = `${getBrowserInfo(session.latestActivity?.browserName)} on ${getOperatingSystem(session.latestActivity?.browserName)}`;
+    const isCurrentSession = session.isCurrent;
+    const deviceInfo = `${getBrowserInfo(session.userAgent)} on ${getOperatingSystem(session.userAgent)}`;
     
     if (isCurrentSession) {
       if (confirm(`Anda akan keluar dari perangkat saat ini (${deviceInfo}). Anda perlu login kembali. Lanjutkan?`)) {
@@ -144,7 +187,7 @@ export default function ActiveDevicesManager() {
     }
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || isLoadingSessions) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -192,15 +235,13 @@ export default function ActiveDevicesManager() {
         </div>
       </div>
 
-      {/* Active Sessions List */}
-      <div className="space-y-4">
+      {/* Active Sessions List */}      <div className="space-y-4">
         {sessions && sessions.length > 0 ? (
           sessions.map((session) => {
-            const isCurrentSession = session.id === currentSession?.id;
-            const location = getLocationInfo(session);
-            const browserInfo = getBrowserInfo(session.latestActivity?.browserName);
-            const osInfo = getOperatingSystem(session.latestActivity?.browserName);
-            const lastActivity = formatLastActivity(session.latestActivity?.timestamp);
+            const isCurrentSession = session.isCurrent;
+            const browserInfo = getBrowserInfo(session.userAgent);
+            const osInfo = getOperatingSystem(session.userAgent);
+            const lastActivity = formatLastActivity(session.lastActivityAt);
             
             return (
               <div 
@@ -218,7 +259,7 @@ export default function ActiveDevicesManager() {
                     <div className={`p-3 rounded-lg ${
                       isCurrentSession ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {getDeviceIcon(session.latestActivity?.deviceType)}
+                      {getDeviceIcon(session.deviceType)}
                     </div>
 
                     {/* Device Details */}
@@ -247,12 +288,7 @@ export default function ActiveDevicesManager() {
                         <div className="flex items-center gap-2">
                           <MapPinIcon className="w-4 h-4" />
                           <span>
-                            {location.city !== 'Unknown' && location.country !== 'Unknown' 
-                              ? `${location.city}, ${location.country}`
-                              : location.country !== 'Unknown' 
-                                ? location.country
-                                : 'Location Unknown'
-                            }
+                            {session.ipAddress || 'Location Unknown'}
                           </span>
                         </div>
 
@@ -260,7 +296,7 @@ export default function ActiveDevicesManager() {
                         <div className="flex items-center gap-2">
                           <GlobeAltIcon className="w-4 h-4" />
                           <span className="font-mono text-xs">
-                            {location.ip}
+                            {session.ipAddress || 'Unknown'}
                           </span>
                         </div>
 
@@ -317,12 +353,8 @@ export default function ActiveDevicesManager() {
                     <div>
                       <span className="font-medium">Status:</span>
                       <div className="mt-1">
-                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                          session.status === 'active' 
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {session.status || 'Active'}
+                        <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          Active
                         </span>
                       </div>
                     </div>

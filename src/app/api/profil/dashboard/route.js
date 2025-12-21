@@ -1,59 +1,60 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../../lib/prisma';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import prisma from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
 
-export async function GET(_request) {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ success: false, _error: 'Unauthorized' }, { status: 401 });
-    }
+    }    // Find the member based on email, google_id, or clerk_id
+    let memberData = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
+      }    });
 
-    // Find the member based on the clerk_id to get the internal database ID
-    let memberData = await prisma.members.findUnique({
-      where: { clerk_id: userId },
-    });    // If member doesn't exist, create a basic member record (this handles webhook sync issues)
+    // If member doesn't exist, create a basic member record
     if (!memberData) {
-      console.log('Creating missing member for:', userId);
-      
-      // Get current user data from Clerk
-      const clerkUser = await currentUser();
-      
-      memberData = await prisma.members.create({
+      console.log('Creating missing member for:', user.email);
+        memberData = await prisma.members.create({
         data: {
-          clerk_id: userId,
-          nama_lengkap: clerkUser?.fullName || null, // Will be filled by user
+          email: user.email,
+          google_id: user.google_id,
+          google_id: user.clerk_id || null,
+          nama_lengkap: user.nama_lengkap || null,
           tanggal_daftar: new Date(),
-          loyalty_point: 0
+          loyalty_point: 0,
+          coin: 0
         }
       });
 
-      // Create email records if available from Clerk user
-      if (clerkUser?.emailAddresses && clerkUser.emailAddresses.length > 0) {
-        const primaryEmail = clerkUser.primaryEmailAddress || clerkUser.emailAddresses[0];
-        
-        const emailData = clerkUser.emailAddresses.map((emailObj) => ({
-          clerk_id: userId,
-          email: emailObj.emailAddress,
-          is_primary: emailObj.id === primaryEmail._id,
-          verified: emailObj.verification?.status === 'verified' || false,
-        }));
-
-        await prisma.member_emails.createMany({
-          data: emailData,
-          skipDuplicates: true,
+      // Create email record
+      if (user.email) {
+        await prisma.member_emails.create({
+          data: { google_id: user.clerk_id || null,
+            email: user.email,
+            is_primary: true,
+            verified: user.email_verified || true,
+          }
         });
       }
 
       // Also ensure user privilege exists
       const existingPrivilege = await prisma.user_privileges.findFirst({
-        where: { clerk_id: userId }
-      });
-
-      if (!existingPrivilege) {
+        where: { 
+          OR: [
+            user.clerk_id ? { google_id: user.clerk_id } : {},
+            { email: user.email }
+          ].filter(obj => Object.keys(obj).length > 0)
+        }
+      });      if (!existingPrivilege) {
         await prisma.user_privileges.create({
-          data: {
-            clerk_id: userId,
+          data: { google_id: user.clerk_id || null,
+            email: user.email,
             privilege: 'user',
             is_active: true,
             granted_at: new Date(),
@@ -138,11 +139,10 @@ export async function GET(_request) {
           where: { id: memberData.id },
           data: { foto_profil_url: avatarUrl }
         });
-        
-        // Update memberData with new avatar URL
+            // Update memberData with new avatar URL
         memberData.foto_profil_url = avatarUrl;
         console.log(`🎨 Auto-generated avatar for existing member ${memberData.nama_lengkap}: ${avatarUrl}`);
-      } catch (_generateError) {
+      } catch (generateError) {
         console.error('Error auto-generating avatar:', generateError);
         // Continue without throwing error
       }

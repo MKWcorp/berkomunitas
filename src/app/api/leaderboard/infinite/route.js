@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../../lib/prisma.js';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/leaderboard/infinite?type=loyalty|comments&page=1&limit=50

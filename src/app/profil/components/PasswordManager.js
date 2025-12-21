@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   LockClosedIcon,
   EyeIcon,
@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function PasswordManager() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showPasswords, setShowPasswords] = useState({

@@ -1,4 +1,4 @@
-import { ClerkProvider } from '@clerk/nextjs';
+// SSO Implementation - No Clerk provider needed
 import { Inter } from 'next/font/google';
 import './globals.css';
 import NavigationWrapper from './components/NavigationWrapper';
@@ -32,28 +32,16 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning={true}
         className="m-0 p-0 min-h-screen w-full overflow-x-hidden"
       >
-        <ClerkProvider 
-          appearance={{
-            baseTheme: undefined,
-            layout: {
-              socialButtonsPlacement: "bottom",
-              socialButtonsVariant: "blockButton",
-            },
-            variables: {
-              colorPrimary: "#ef4444",
-            },
-          }}
-        >
-          <GlassThemeProvider>
-            <SubdomainHandler />
-            <NavigationWrapper />
-            <AutoGlassWrapper>
-              <ContentWrapper>
+        {/* SSO: No provider needed - using localStorage + JWT */}
+        <GlassThemeProvider>
+          <SubdomainHandler />
+          <NavigationWrapper />
+          <AutoGlassWrapper>              <ContentWrapper>
                 {children}
               </ContentWrapper>
             </AutoGlassWrapper>
           </GlassThemeProvider>
-        </ClerkProvider>
+        {/* SSO: No closing ClerkProvider */}
         <SpeedInsights />
         <Analytics />
       </body>

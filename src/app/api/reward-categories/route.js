@@ -1,9 +1,6 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 // GET - Fetch all reward categories
 export async function GET(request) {
   try {
@@ -34,8 +31,8 @@ export async function GET(request) {
 // POST - Create new reward category (Admin only)
 export async function POST(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -101,8 +98,8 @@ export async function POST(request) {
 // PUT - Update reward category (Admin only)
 export async function PUT(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -175,8 +172,8 @@ export async function PUT(request) {
 // DELETE - Delete reward category (Admin only)
 export async function DELETE(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

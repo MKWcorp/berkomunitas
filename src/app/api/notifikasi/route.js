@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import prisma from '../../../utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // GET - Fetch user notifications
 export async function GET(request) {
@@ -25,19 +25,21 @@ export async function GET(request) {
 
   try {
     // Check if user is authenticated
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in to view notifications.' },
         { status: 401 }
       );
-    }
-
-    // Get the logged-in member's data
-    const currentMember = await prisma.members.findUnique({
+    }    // Get the logged-in member's data
+    const currentMember = await prisma.members.findFirst({
       where: {
-        clerk_id: user.id
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
       }
     });
 
@@ -130,7 +132,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     // Check if user is authenticated
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(
@@ -140,9 +142,13 @@ export async function POST(request) {
     }
 
     // Get the logged-in member's data
-    const currentMember = await prisma.members.findUnique({
+    const currentMember = await prisma.members.findFirst({
       where: {
-        clerk_id: user.id
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
       }
     });
 
@@ -219,7 +225,7 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     // Check if user is authenticated
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(
@@ -229,9 +235,13 @@ export async function DELETE(request) {
     }
 
     // Get the logged-in member's data
-    const currentMember = await prisma.members.findUnique({
+    const currentMember = await prisma.members.findFirst({
       where: {
-        clerk_id: user.id
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
       }
     });
 

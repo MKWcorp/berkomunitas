@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   GiftIcon,
   ClockIcon,
@@ -16,7 +16,7 @@ const navigation = [
 
 export default function RewardsNavigation() {
   const pathname = usePathname();
-  const { user } = useUser();
+  const { user } = useSSOUser();
 
   return (
     <nav className="bg-white/90 backdrop-blur-md shadow-lg border-b border-green-200/50 sticky top-0 z-50">
@@ -60,19 +60,18 @@ export default function RewardsNavigation() {
           {/* Right side - User Profile */}
           <div className="flex items-center">
             {/* User Profile Dropdown */}
-            {user && (
-              <div className="flex items-center space-x-3">
+            {user && (              <div className="flex items-center space-x-3">
                 <div className="text-right hidden sm:block">
                   <div className="text-sm font-medium text-gray-900">
-                    {user.fullName || user.firstName || 'Admin'}
+                    {user.name || 'Admin'}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {user.primaryEmailAddress?.emailAddress}
+                    {user.email}
                   </div>
                 </div>
                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-green-600">
-                    {(user.fullName || user.firstName || 'A')[0].toUpperCase()}
+                    {(user.name || 'A')[0].toUpperCase()}
                   </span>
                 </div>
               </div>

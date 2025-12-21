@@ -1,8 +1,5 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 // GET /api/rewards/access-test - Test BerkomunitasPlus rewards access
 export async function GET(request) {
   try {
@@ -22,7 +19,7 @@ export async function GET(request) {
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true,
+        google_id: true,
         loyalty_point: true,
         coin: true
       }
@@ -37,8 +34,7 @@ export async function GET(request) {
 
     // Check if member has berkomunitasplus privilege
     const berkomunitasPlusPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: member.clerk_id,
+      where: { google_id: member.clerk_id,
         privilege: 'berkomunitasplus',
         is_active: true
       }
@@ -113,7 +109,7 @@ export async function GET(request) {
         name: member.nama_lengkap,
         loyalty_points: member.loyalty_point,
         coins: member.coin,
-        clerk_id: member.clerk_id
+        google_id: member.clerk_id
       },
       privilege_info: {
         granted_at: berkomunitasPlusPrivilege.granted_at,

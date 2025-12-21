@@ -1,26 +1,23 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 // Debug endpoint untuk check dan fix verified data
 export async function POST(request) {
   console.log('🛠️ [POST /api/beauty-consultant/debug] Starting debug request');
   
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       console.log('❌ [Debug] Unauthorized - no user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`📧 [Debug] User: ${user.emailAddresses[0]?.emailAddress} (${user.id})`);
+    console.log(`📧 [Debug] User: ${user.email} (${user.id})`);
 
     // Check member record
     const member = await prisma.members.findUnique({
-      where: { clerk_id: user.id }
+      where: { google_id: user.id }
     });
 
     console.log('🔍 [Debug] Member found:', !!member);
@@ -28,7 +25,7 @@ export async function POST(request) {
       console.log('🔍 [Debug] Member details:', {
         id: member.id,
         nama_lengkap: member.nama_lengkap,
-        clerk_id: member.clerk_id
+        google_id: member.clerk_id
       });
     }
 
@@ -36,7 +33,7 @@ export async function POST(request) {
     const bcConnection = await prisma.bc_drwskincare_plus.findFirst({
       where: {
         member: {
-          clerk_id: user.id
+          google_id: user.id
         }
       },
       include: {
@@ -60,7 +57,7 @@ export async function POST(request) {
       where: {
         bc_drwskincare_plus: {
           member: {
-            clerk_id: user.id
+            google_id: user.id
           }
         }
       }

@@ -34,7 +34,7 @@ async function generateRemainingPhotos() {
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true,
+        google_id: true,
         foto_profil_url: true
       }
     });

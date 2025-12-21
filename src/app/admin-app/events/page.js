@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSSOUser } from '@/hooks/useSSOUser';
 import AdminLayout from '../components/AdminLayout';
 import { 
   AdminPageLayout,
@@ -230,7 +230,7 @@ function EventModal({ open, onClose, event = null, onSave, onDelete, mode = 'cre
 }
 
 export default function EventsAdminPage() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -240,10 +240,10 @@ export default function EventsAdminPage() {
   const [modalMode, setModalMode] = useState('create');
 
   useEffect(() => {
-    if (user?.primaryEmailAddress?.emailAddress) {
+    if (user?.email) {
       loadEvents();
     }
-  }, [user?.primaryEmailAddress?.emailAddress]);
+  }, [user?.email]);
 
   async function loadEvents() {
     setLoading(true);

@@ -24,7 +24,7 @@ export async function GET(req, { params }) {
         status_kustom: true,
         foto_profil_url: true,
         tanggal_daftar: true,
-        clerk_id: true,
+        google_id: true,
         user_usernames: { select: { username: true } },
         member_emails: {
           select: { email: true },
@@ -57,7 +57,7 @@ export async function GET(req, { params }) {
       status_kustom: member.status_kustom,
       foto_profil_url: member.foto_profil_url,
       tanggal_daftar: member.tanggal_daftar,
-      clerk_id: member.clerk_id,
+      google_id: member.clerk_id,
       username: member.user_usernames?.username || '',
       email: member.member_emails?.[0]?.email || '',
       sosmed_platform: member.profil_sosial_media?.[0]?.platform || '',
@@ -163,7 +163,7 @@ export async function PUT(req, { params }) {
         }
         // Only update the primary email
         const currentPrimary = await tx.member_emails.findFirst({
-          where: { clerk_id: member.clerk_id, is_primary: true }
+          where: { google_id: member.clerk_id, is_primary: true }
         });
         if (currentPrimary) {
           updatedEmail = await tx.member_emails.update({
@@ -173,7 +173,7 @@ export async function PUT(req, { params }) {
         } else {
           updatedEmail = await tx.member_emails.create({
             data: {
-              clerk_id: member.clerk_id,
+              google_id: member.clerk_id,
               email,
               is_primary: true
             }

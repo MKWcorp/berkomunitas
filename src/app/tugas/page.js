@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import Confetti from 'react-confetti';
 import GlassCard from '../components/GlassCard';
@@ -69,7 +69,7 @@ function _getSourceBgColor(source) {
 }
 
 export default function TugasPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded, isSignedIn } = useSSOUser();
   const router = useRouter();
   
   // Profile completion check

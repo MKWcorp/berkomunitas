@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import SetPasswordForm from './components/SetPasswordForm';
 import ActiveDevicesManager from './components/ActiveDevicesManager';
 import DeleteAccountSection from './components/DeleteAccountSection';
@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function SecurityPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [activeTab, setActiveTab] = useState('password');
 
   if (!isLoaded) {

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useUser, SignedIn, SignedOut } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useState, useEffect } from 'react';
 import {
   ChartBarIcon,
@@ -23,7 +23,7 @@ import UserProfileDropdown from '../../components/UserProfileDropdown';
 // Custom Hook to check profile completeness (same as original)
 function useProfileCompleteness() {
   const [isComplete, setIsComplete] = useState(true);
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useSSOUser();
 
   useEffect(() => {
     if (isSignedIn) {
@@ -43,7 +43,7 @@ function useProfileCompleteness() {
 
 export default function AdminNavigationMenu() {
   const isProfileComplete = useProfileCompleteness();
-  const { isSignedIn } = useUser();
+  const { user, isSignedIn } = useSSOUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -125,15 +125,14 @@ export default function AdminNavigationMenu() {
           {isSignedIn && (
             <>
               <NotificationBell />
-              <UserProfileDropdown />
-            </>
+              <UserProfileDropdown />            </>
           )}
 
-          <SignedOut>
-            <Link href="/sign-in" className="bg-gradient-to-r from-indigo-500/80 to-purple-600/80 hover:from-indigo-600/90 hover:to-purple-700/90 px-3 md:px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/25 backdrop-blur-sm border border-white/30 text-white">
+          {!isSignedIn && (
+            <Link href="/login" className="bg-gradient-to-r from-indigo-500/80 to-purple-600/80 hover:from-indigo-600/90 hover:to-purple-700/90 px-3 md:px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/25 backdrop-blur-sm border border-white/30 text-white">
               Login
             </Link>
-          </SignedOut>
+          )}
         </div>
       </nav>
 

@@ -1,20 +1,19 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../../lib/prisma';
-import { auth } from '@clerk/nextjs/server';
+import prisma from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
 import { createNewTaskNotification } from '../../../../../lib/taskNotifications';
 
 export async function GET(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     // Check if user has admin privilege using user_privileges table
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: userId,
+      where: { member_id: user.id,
         privilege: 'admin',
         is_active: true,
         OR: [
@@ -66,9 +65,7 @@ export async function GET(request) {
         }
       ];
     }
-  }
-
-  const [tasks, total] = await Promise.all([
+  }  const [tasks, total] = await Promise.all([
     prisma.tugas_ai.findMany({ 
       where: whereClause,
       skip: (page - 1) * limit, 
@@ -112,16 +109,15 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     // Check if user has admin privilege using user_privileges table
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: userId,
+      where: { member_id: user.id,
         privilege: 'admin',
         is_active: true,
         OR: [
@@ -158,8 +154,7 @@ export async function POST(request) {
     // Create notifications for all active members when new task is created
     if (data.status === 'tersedia') {
       const activeMembers = await prisma.members.findMany({
-        where: {
-          clerk_id: { not: null }, // Only members who have registered
+        where: { google_id: { not: null }, // Only members who have registered
           status: { not: 'banned' } // Exclude banned members
         },
         select: { id: true }

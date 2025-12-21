@@ -7,13 +7,12 @@ async function fixMissingEmails() {
   try {
     // Get all members without emails
     const membersWithoutEmails = await prisma.members.findMany({
-      where: {
-        clerk_id: { not: null },
+      where: { google_id: { not: null },
         member_emails: { none: {} }
       },
       select: {
         id: true,
-        clerk_id: true,
+        google_id: true,
         nama_lengkap: true,
         tanggal_daftar: true
       }
@@ -41,7 +40,7 @@ async function fixMissingEmails() {
           
           // Create email records
           const emailsToCreate = clerkUser.emailAddresses.map((emailObj) => ({
-            clerk_id: member.clerk_id,
+            google_id: member.clerk_id,
             email: emailObj.emailAddress,
             is_primary: emailObj.id === primaryEmailInfo.id,
             verified: emailObj.verification?.status === 'verified' || false,
@@ -55,7 +54,7 @@ async function fixMissingEmails() {
           results.push({
             member_id: member.id,
             nama_lengkap: member.nama_lengkap,
-            clerk_id: member.clerk_id,
+            google_id: member.clerk_id,
             status: 'success',
             emails_added: emailsToCreate.length,
             primary_email: primaryEmailInfo.emailAddress
@@ -66,7 +65,7 @@ async function fixMissingEmails() {
           results.push({
             member_id: member.id,
             nama_lengkap: member.nama_lengkap,
-            clerk_id: member.clerk_id,
+            google_id: member.clerk_id,
             status: 'no_email_in_clerk',
             emails_added: 0
           });
@@ -82,7 +81,7 @@ async function fixMissingEmails() {
         results.push({
           member_id: member.id,
           nama_lengkap: member.nama_lengkap,
-          clerk_id: member.clerk_id,
+          google_id: member.clerk_id,
           status: 'error',
           error: error.message,
           emails_added: 0

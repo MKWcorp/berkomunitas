@@ -34,8 +34,7 @@ export async function checkUserPrivileges(user_clerk_id) {
   try {
     // 1. Ambil privilege aktif dari database
     const userPrivilegeRecord = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: user_clerk_id,
+      where: { google_id: user_clerk_id,
         is_active: true,
         OR: [
           { expires_at: null },

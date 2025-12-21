@@ -1,13 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { PencilIcon, TrashIcon, PhotoIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import GlassCard from '../../components/GlassCard';
 import AdminModal from '../components/AdminModal';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 
 export default function RewardsTab() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [rewards, setRewards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +32,7 @@ export default function RewardsTab() {
   }, [user]);
   // Load redemption history
   const loadRedemptions = async () => {
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
     try {
       setLoadingRedemptions(true);
       const response = await fetch('/api/admin/redemptions');
@@ -102,12 +102,12 @@ export default function RewardsTab() {
   };
 
   const loadRewards = async () => {
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
     
     try {
       setLoading(true);
       const response = await fetch('/api/admin/rewards', {
-        headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+        headers: { 'x-user-email': user.email }
       });
       
       if (response.ok) {
@@ -151,7 +151,7 @@ export default function RewardsTab() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
 
     setSaving(true);
     try {
@@ -162,7 +162,7 @@ export default function RewardsTab() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user.primaryEmailAddress.emailAddress
+          'x-user-email': user.email
         },
         body: JSON.stringify(form)
       });
@@ -221,12 +221,12 @@ export default function RewardsTab() {
 
   const handleDelete = async (id) => {
     if (!confirm('Yakin ingin menghapus hadiah ini?')) return;
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
 
     try {
       const response = await fetch(`/api/admin/rewards/${id}`, {
         method: 'DELETE',
-        headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+        headers: { 'x-user-email': user.email }
       });
 
       if (response.ok) {

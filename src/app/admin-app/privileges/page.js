@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { 
@@ -31,7 +31,7 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 
 function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mode = 'create' }) {
   const [form, setForm] = useState({
-    clerk_id: '',
+    google_id: '',
     privilege: 'user',
     is_active: true,
     ...privilege
@@ -40,14 +40,14 @@ function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mod
   useEffect(() => {
     if (privilege) {
       setForm({
-        clerk_id: '',
+        google_id: '',
         privilege: 'user',
         is_active: true,
         ...privilege
       });
     } else {
       setForm({
-        clerk_id: '',
+        google_id: '',
         privilege: 'user',
         is_active: true
       });
@@ -91,7 +91,7 @@ function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mod
               className="w-full backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50"
               placeholder="user_xxxxxxxxx"
               value={form.clerk_id}
-              onChange={(e) => setForm({...form, clerk_id: e.target.value})}
+              onChange={(e) => setForm({...form, google_id: e.target.value})}
               required
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -170,7 +170,7 @@ function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mod
 }
 
 export default function PrivilegesPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const router = useRouter();
   const [privileges, setPrivileges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +183,7 @@ export default function PrivilegesPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       router.push('/sign-in');
       return;
     }
@@ -214,7 +214,7 @@ export default function PrivilegesPage() {
     setLoading(true);
     try {
       const response = await fetch('/api/admin/privileges', {
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
       if (response.ok) {
         const data = await response.json();
@@ -239,7 +239,7 @@ export default function PrivilegesPage() {
         method,
         headers: { 
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify(form)
       });
@@ -261,7 +261,7 @@ export default function PrivilegesPage() {
     try {
       const res = await fetch(`/api/admin/privileges/${privilegeId}`, { 
         method: 'DELETE',
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
       if (!res.ok) throw new Error('Failed to delete privilege');
       

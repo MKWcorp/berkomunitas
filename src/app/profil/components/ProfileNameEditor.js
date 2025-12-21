@@ -1,12 +1,12 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 
 export default function ProfileNameEditor() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
 
   // Get the display name from user data
-  const displayName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Nama Lengkap';
+  const displayName = user?.username || user?.email?.split('@')[0] || 'Nama Lengkap';
 
   return (
     <div className="space-y-3">

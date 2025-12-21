@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { findUserLevel, getNextLevel, calculateLoyaltyNeeded } from '@/lib/rankingLevels';
 
 // Function untuk generate pesan lokasi user berdasarkan level
@@ -21,7 +21,7 @@ const getLocationMessage = (user, userLevel) => {
 };
 
 const UserAvatar = ({ user, isCurrentUser, onClick }) => {
-  const { user: clerkUser } = useUser();
+  const { user: clerkUser } = useSSOUser();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [userLevel, setUserLevel] = useState(null);
   const [showTooltip, setShowTooltip] = useState(false);

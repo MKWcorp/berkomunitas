@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '../../../../utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // GET - Fetch loyalty point history with member details (Admin only)
 export async function GET(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user has admin privilege
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: userId,
+      where: { member_id: user.id,
         privilege: 'admin',
         is_active: true,
         OR: [
@@ -68,7 +67,7 @@ export async function GET(request) {
         members: {
           select: {
             nama_lengkap: true,
-            clerk_id: true,
+            google_id: true,
             member_emails: {
               select: {
                 email: true
@@ -87,7 +86,7 @@ export async function GET(request) {
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true,
+        google_id: true,
         loyalty_point: true,
         member_emails: {
           select: {

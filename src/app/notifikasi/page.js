@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   BellIcon, 
   UserIcon, 
@@ -17,7 +17,7 @@ import {
 import GlassCard from '../components/GlassCard';
 
 export default function NotifikasiPage() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useSSOUser();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({

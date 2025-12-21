@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import WilayahForm from '../../components/WilayahForm';
 import { 
@@ -16,7 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function BerkomunitasPlusVerifiedPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const router = useRouter();
   
   const [member, setMember] = useState(null);

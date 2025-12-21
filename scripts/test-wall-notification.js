@@ -6,8 +6,7 @@ async function testWallPostNotification() {
   try {
     // Get two different users
     const users = await prisma.members.findMany({
-      where: {
-        clerk_id: { not: null }
+      where: { google_id: { not: null }
       },
       take: 2,
       include: {

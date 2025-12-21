@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, SignInButton } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import GlassCard from './components/GlassCard';
 
 export default function RewardsRootPage() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [checking, setChecking] = useState(false);
   const [adminCheckDone, setAdminCheckDone] = useState(false);
   const [isPartnerOrAbove, setIsPartnerOrAbove] = useState(false);
@@ -24,7 +24,7 @@ export default function RewardsRootPage() {
     if (!isLoaded || adminCheckDone) return;
     
     // If no user is signed in, don't proceed with admin check
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       console.log('✅ No authenticated user, showing login page');
       setAdminCheckDone(true);
       return; // Stay on this page to show login button
@@ -105,7 +105,7 @@ export default function RewardsRootPage() {
   }
 
   // Show login button if not authenticated and check is done
-  if (adminCheckDone && !user?.primaryEmailAddress?.emailAddress) {
+  if (adminCheckDone && !user?.email) {
     console.log('🔐 Showing login page');
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
@@ -124,13 +124,13 @@ export default function RewardsRootPage() {
               Silakan login untuk mengakses sistem rewards
             </p>
           </div>
-          
-          <div className="space-y-4">
-            <SignInButton mode="modal" redirectUrl="/rewards-app">
-              <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-4 px-8 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-lg">
-                🔐 Login Rewards
-              </button>
-            </SignInButton>
+            <div className="space-y-4">
+            <button
+              onClick={() => window.location.href = '/login'}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-4 px-8 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-lg"
+            >
+              🔐 Login dengan Google
+            </button>
             
             {/* Alternative login method */}
             <div className="relative">
@@ -143,10 +143,10 @@ export default function RewardsRootPage() {
             </div>
             
             <button 
-              onClick={() => window.location.href = 'https://berkomunitas.com/sign-in'}
+              onClick={() => window.location.href = '/'}
               className="w-full bg-gray-100 text-gray-700 font-semibold py-3 px-8 rounded-xl hover:bg-gray-200 transition-all duration-300 border border-gray-300"
             >
-              Login di Main Site
+              Kembali ke Beranda
             </button>
           </div>
           
@@ -167,7 +167,7 @@ export default function RewardsRootPage() {
   }
 
   // Show error if user is authenticated but not partner/admin
-  if (adminCheckDone && user?.primaryEmailAddress?.emailAddress && !isPartnerOrAbove) {
+  if (adminCheckDone && user?.email && !isPartnerOrAbove) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
         <GlassCard className="p-8 text-center max-w-lg">
@@ -183,7 +183,7 @@ export default function RewardsRootPage() {
             </p>
             <div className="bg-green-50 p-4 rounded-lg text-sm">
               <h3 className="font-bold text-green-800 mb-2">🎁 Info Akses:</h3>
-              <p><strong>Email:</strong> {user?.primaryEmailAddress?.emailAddress || 'N/A'}</p>
+              <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
               <p><strong>Minimum Level:</strong> Partner atau Admin</p>
               <p><strong>Panel:</strong> Rewards Management System</p>
             </div>
@@ -218,7 +218,7 @@ export default function RewardsRootPage() {
         <div className="text-left space-y-2 text-sm">
           <p><strong>Debug Info:</strong> {debugInfo}</p>
           <p><strong>isLoaded:</strong> {isLoaded ? 'Yes' : 'No'}</p>
-          <p><strong>User:</strong> {user?.primaryEmailAddress?.emailAddress || 'None'}</p>
+          <p><strong>User:</strong> {user?.email || 'None'}</p>
           <p><strong>adminCheckDone:</strong> {adminCheckDone ? 'Yes' : 'No'}</p>
           <p><strong>checking:</strong> {checking ? 'Yes' : 'No'}</p>
           <p><strong>isPartnerOrAbove:</strong> {isPartnerOrAbove ? 'Yes' : 'No'}</p>

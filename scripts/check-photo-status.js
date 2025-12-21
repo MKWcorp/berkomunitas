@@ -85,7 +85,7 @@ async function checkStatus() {
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true,
+        google_id: true,
         foto_profil_url: true
       },      take: 5,
       orderBy: { tanggal_daftar: 'desc' }

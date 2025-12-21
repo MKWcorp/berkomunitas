@@ -1,9 +1,6 @@
 // API Route untuk generate avatar otomatis saat user baru daftar
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 export async function POST(request) {
   try {
     const { memberId, nama_lengkap } = await request.json();

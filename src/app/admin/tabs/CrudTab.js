@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import AdminModal from '../components/AdminModal';
 import ScrollToTopButton from '../components/ScrollToTopButton';
@@ -15,7 +15,7 @@ function getMemberEmail(member) {
 }
 
 export default function CrudTab({ resource }) {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -64,13 +64,13 @@ export default function CrudTab({ resource }) {
   // Load data based on resource type
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.primaryEmailAddress?.emailAddress) return;
+      if (!user?.email) return;
       
       try {
         setLoading(true);
         const endpoint = `/api/admin/${resource}`;
         const response = await fetch(endpoint, {
-          headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+          headers: { 'x-user-email': user.email }
         });
         
         if (response.ok) {

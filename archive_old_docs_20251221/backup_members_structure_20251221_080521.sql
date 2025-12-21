@@ -1,0 +1,20 @@
+-- Backup of members table structure
+-- Created: 2025-12-21 08:05:21.259008
+-- Total records: 81
+
+-- Columns:
+-- id: integer  NOT NULL
+-- nama_lengkap: text  NULL
+-- nomer_wa: text  NULL
+-- tanggal_daftar: timestamp with time zone  NULL
+-- loyalty_point: integer  NOT NULL
+-- clerk_id: character varying 255 NULL
+-- foto_profil_url: text  NULL
+-- bio: text  NULL
+-- status_kustom: text  NULL
+-- featured_badge_id: text  NULL
+-- coin: integer  NOT NULL
+-- google_id: text  NULL
+-- email: text  NULL
+-- last_login_at: timestamp with time zone  NULL
+-- sso_metadata: jsonb  NULL

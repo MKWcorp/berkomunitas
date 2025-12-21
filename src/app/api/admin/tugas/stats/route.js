@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../../lib/prisma';
-import { currentUser } from '@clerk/nextjs/server';
+import { getCurrentUser } from '@/lib/ssoAuth';
 
 // GET /api/admin/tugas/stats - Get task statistics
-export async function GET() {
+export async function GET(request) {
   try {
     console.log('GET /api/admin/tugas/stats - Starting...');
     
     // Get current user from Clerk for admin authentication
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     console.log('GET /api/admin/tugas/stats - Clerk user:', user?.id);
     
     if (!user?.id) {
@@ -17,8 +17,7 @@ export async function GET() {
 
     // Check if user has admin privileges using clerk_id
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: { 
-        clerk_id: user.id, 
+      where: { google_id: user.id, 
         privilege: 'admin', 
         is_active: true 
       }
@@ -31,7 +30,7 @@ export async function GET() {
       return NextResponse.json({ 
         error: 'Forbidden: Admin access required',
         debug: {
-          clerk_id: user.id,
+          google_id: user.id,
           has_admin_privilege: !!adminPrivilege
         }
       }, { status: 403 });

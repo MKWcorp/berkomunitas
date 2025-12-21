@@ -1,9 +1,13 @@
+// DEPRECATED: This file is no longer used after SSO migration
+// Clerk has been removed from the project
 import { NextResponse } from 'next/server';
-import { clerkClient } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
-
+export async function POST(req) {
+  return NextResponse.json({
+    success: false,
+    error: 'This endpoint is deprecated. Clerk has been removed from the project.'
+  }, { status: 410 });
+}
 export async function POST(req) {
   try {
     // Validate environment variables
@@ -19,13 +23,12 @@ export async function POST(req) {
 
     // Get all members without emails
     const membersWithoutEmails = await prisma.members.findMany({
-      where: {
-        clerk_id: { not: null },
+      where: { google_id: { not: null },
         member_emails: { none: {} }
       },
       select: {
         id: true,
-        clerk_id: true,
+        google_id: true,
         nama_lengkap: true,
         tanggal_daftar: true
       }
@@ -101,7 +104,7 @@ export async function POST(req) {
             
             // Create email records
             const emailsToCreate = clerkUser.emailAddresses.map((emailObj) => ({
-              clerk_id: member.clerk_id,
+              google_id: member.clerk_id,
               email: emailObj.emailAddress,
               is_primary: emailObj.id === primaryEmailInfo.id,
               verified: emailObj.verification?.status === 'verified' || false,
@@ -115,7 +118,7 @@ export async function POST(req) {
             results.push({
               member_id: member.id,
               nama_lengkap: member.nama_lengkap,
-              clerk_id: member.clerk_id,
+              google_id: member.clerk_id,
               status: 'success',
               emails_added: emailsToCreate.length,
               primary_email: primaryEmailInfo.emailAddress
@@ -126,7 +129,7 @@ export async function POST(req) {
             results.push({
               member_id: member.id,
               nama_lengkap: member.nama_lengkap,
-              clerk_id: member.clerk_id,
+              google_id: member.clerk_id,
               status: 'no_email_in_clerk',
               emails_added: 0
             });
@@ -142,7 +145,7 @@ export async function POST(req) {
           results.push({
             member_id: member.id,
             nama_lengkap: member.nama_lengkap,
-            clerk_id: member.clerk_id,
+            google_id: member.clerk_id,
             status: 'error',
             error: error.message,
             emails_added: 0

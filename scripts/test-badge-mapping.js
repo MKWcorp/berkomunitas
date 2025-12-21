@@ -13,7 +13,7 @@ async function testBadgeMapping() {
           select: {
             id: true,
             nama_lengkap: true,
-            clerk_id: true,
+            google_id: true,
             nomer_wa: true
           }
         },
@@ -43,7 +43,7 @@ async function testBadgeMapping() {
       member: {
         id: mb.members.id,
         name: mb.members.nama_lengkap || 'Nama tidak tersedia',
-        clerk_id: mb.members.clerk_id
+        google_id: mb.members.clerk_id
       },
       badge: mb.badges
     }));

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import prisma from '../../../../../lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,18 +8,21 @@ export const dynamic = 'force-dynamic';
  * GET /api/profil/sosial-media
  * Get user's social media profiles
  */
-export async function GET() {
+export async function GET(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = user.id;
-
-    // Find member by clerk_id
+    // Find member by email or google_id
     const member = await prisma.members.findFirst({
-      where: { clerk_id: userId }
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id }
+        ]
+      }
     });
 
     if (!member) {
@@ -52,7 +55,7 @@ export async function GET() {
  */
 export async function POST(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -66,11 +69,14 @@ export async function POST(request) {
       );
     }
 
-    const userId = user.id;
-
-    // Find member by clerk_id
+    // Find member by email or google_id
     const member = await prisma.members.findFirst({
-      where: { clerk_id: userId }
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id }
+        ]
+      }
     });
 
     if (!member) {
@@ -135,7 +141,7 @@ export async function POST(request) {
  */
 export async function DELETE(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -149,11 +155,14 @@ export async function DELETE(request) {
       );
     }
 
-    const userId = user.id;
-
-    // Find member by clerk_id
+    // Find member by email or google_id
     const member = await prisma.members.findFirst({
-      where: { clerk_id: userId }
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id }
+        ]
+      }
     });
 
     if (!member) {

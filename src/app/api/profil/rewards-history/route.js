@@ -1,16 +1,12 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-export async function GET() {
+import { getCurrentUser } from '@/lib/ssoAuth';
+export async function GET(request) {
   try {
     // Check authentication
-    const { userId } = await auth();
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
 
-    if (!userId || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -19,9 +15,7 @@ export async function GET() {
 
     // First, get the member record to find the member_id
     const member = await prisma.members.findFirst({
-      where: {
-        clerk_id: userId
-      },
+      where: { id: user.id },
       select: {
         id: true
       }

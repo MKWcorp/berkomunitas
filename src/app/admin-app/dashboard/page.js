@@ -10,7 +10,7 @@ import {
   CircleStackIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect, useMemo } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { 
@@ -24,7 +24,7 @@ import { GlassContainer, GlassCard } from '@/components/GlassLayout';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 export default function DashboardPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const router = useRouter();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -151,7 +151,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoaded) return;
     
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       router.push('/sign-in');
       return;
     }
@@ -182,7 +182,7 @@ export default function DashboardPage() {
     try {
       const response = await fetch('/api/admin/dashboard', { 
         headers: { 
-          'x-user-email': user.primaryEmailAddress.emailAddress,
+          'x-user-email': user.email,
           'Cache-Control': 'no-cache'
         } 
       });

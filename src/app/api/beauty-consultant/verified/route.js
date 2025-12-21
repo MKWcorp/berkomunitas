@@ -1,29 +1,26 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 // GET: Fetch verified BC data for user
 export async function GET(request) {
   console.log('🔍 [GET /api/beauty-consultant/verified] Starting request');
   
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       console.log('❌ [Verified GET] Unauthorized - no user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`📧 [Verified GET] User: ${user.emailAddresses[0]?.emailAddress}`);
+    console.log(`📧 [Verified GET] User: ${user.email}`);
 
     // Get verified BC data for this user
     const verifiedData = await prisma.bc_drwskincare_plus_verified.findFirst({
       where: {
         bc_drwskincare_plus: {
           member: {
-            clerk_id: user.id
+            google_id: user.id
           }
         }
       },
@@ -77,27 +74,27 @@ export async function PUT(request) {
   console.log('📝 [PUT /api/beauty-consultant/verified] Starting request');
   
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       console.log('❌ [Verified PUT] Unauthorized - no user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`📧 [Verified PUT] User: ${user.emailAddresses[0]?.emailAddress}`);
+    console.log(`📧 [Verified PUT] User: ${user.email}`);
 
     const body = await request.json();
     console.log('📋 [Verified PUT] Request body:', body);
     console.log('🏠 [Verified PUT] Alamat lengkap received:', body.alamat_lengkap);
 
     // Get verified data for this user - with debug logging
-    console.log('🔍 [Verified PUT] Looking for verified data with clerk_id:', user.id);
+    console.log('🔍 [Verified PUT] Looking for verified data with google_id:', user.id);
     
     const existingData = await prisma.bc_drwskincare_plus_verified.findFirst({
       where: {
         bc_drwskincare_plus: {
           member: {
-            clerk_id: user.id
+            google_id: user.id
           }
         }
       }
@@ -116,7 +113,7 @@ export async function PUT(request) {
       const bcConnection = await prisma.bc_drwskincare_plus.findFirst({
         where: {
           member: {
-            clerk_id: user.id
+            google_id: user.id
           }
         }
       });

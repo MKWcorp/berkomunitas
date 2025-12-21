@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
+import prisma from '@/lib/prisma';
 import { requireAdmin } from '../../../../../lib/requireAdmin';
 
 export async function GET(request) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   
   const privileges = await prisma.user_privileges.findMany({
     include: {
@@ -35,13 +41,19 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   
   const { clerk_id, privilege, is_active } = await request.json();
 
   // Get member from clerk_id
   const member = await prisma.members.findUnique({
-    where: { clerk_id: clerk_id }
+    where: { google_id: clerk_id }
   });
   
   if (!member) {
@@ -50,7 +62,7 @@ export async function POST(request) {
   
   // Check if privilege already exists for this user
   const existing = await prisma.user_privileges.findFirst({
-    where: { clerk_id: clerk_id, privilege }
+    where: { google_id: clerk_id, privilege }
   });
   
   if (existing) {
@@ -58,8 +70,7 @@ export async function POST(request) {
   }
   
   const newPrivilege = await prisma.user_privileges.create({
-    data: {
-      clerk_id: clerk_id, // Gunakan clerk_id sesuai schema yang baru
+    data: { google_id: clerk_id, // Gunakan clerk_id sesuai schema yang baru
       privilege,
       is_active: is_active ?? true,
       granted_at: new Date()

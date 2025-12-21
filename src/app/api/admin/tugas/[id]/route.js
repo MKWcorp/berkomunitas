@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
+import prisma from '@/lib/prisma';
 import { requireAdmin } from '../../../../../../lib/requireAdmin';
 import { convertBigInt } from '../../../../../../lib/bigIntUtils';
 
 export async function GET(request, { params }) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   
   try {
     const { id } = await params;
@@ -82,7 +88,13 @@ export async function GET(request, { params }) {
 }
 
 export async function PUT(request, { params }) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   const { id } = await params;
   const body = await request.json();
   
@@ -112,13 +124,16 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   const { id } = await params;
   
   try {
-    const url = new URL(request.url);
-    const forceDelete = url.searchParams.get('force') === 'true';
-    
     // First check if task exists and get submission count
     const taskWithSubmissions = await prisma.tugas_ai.findUnique({
       where: { id: Number(id) },
@@ -135,18 +150,9 @@ export async function DELETE(request, { params }) {
 
     const submissionCount = taskWithSubmissions.task_submissions.length;
 
-    // If task has submissions and force delete is not requested
-    if (submissionCount > 0 && !forceDelete) {
-      return NextResponse.json({ 
-        error: `Cannot delete task. This task has ${submissionCount} submission(s).`,
-        hasSubmissions: true,
-        submissionCount: submissionCount,
-        message: `Tugas ini memiliki ${submissionCount} submission. Untuk menghapus tugas beserta submissions, gunakan force delete.`
-      }, { status: 400 });
-    }
-
-    // Use transaction to delete submissions first, then the task
-    if (forceDelete && submissionCount > 0) {
+    // Always use transaction to delete submissions first, then the task
+    // This automatically cascades the delete
+    if (submissionCount > 0) {
       await prisma.$transaction(async (tx) => {
         // Delete all task submissions first
         await tx.task_submissions.deleteMany({

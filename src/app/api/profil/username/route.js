@@ -1,24 +1,27 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
+import { getCurrentUser } from '@/lib/ssoAuth';
 import { ensureMemberHasUsername } from '@/utils/generateUsername';
 
-const prisma = new PrismaClient();
-
 // GET - Get current user's username info
-export async function GET() {
+export async function GET(request) {
   try {
-    const user = await currentUser();
-    
-    if (!user) {
+    const user = await getCurrentUser(request);
+      if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const member = await prisma.members.findUnique({
-      where: { clerk_id: user.id },
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          ...(user.clerk_id ? [{ google_id: user.clerk_id }] : [])
+        ]
+      },
       include: {
         user_usernames: true
       }
@@ -89,7 +92,7 @@ export async function PUT(request) {
 // Shared function for both POST and PUT methods
 async function handleUsernameUpdate(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(
@@ -131,10 +134,14 @@ async function handleUsernameUpdate(request) {
         { error: 'Username ini tidak dapat digunakan karena sudah direservasi sistem' },
         { status: 400 }
       );
-    }
-
-    const member = await prisma.members.findUnique({
-      where: { clerk_id: user.id },
+    }    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          ...(user.clerk_id ? [{ google_id: user.clerk_id }] : [])
+        ]
+      },
       include: {
         user_usernames: true
       }
@@ -205,9 +212,9 @@ async function handleUsernameUpdate(request) {
 }
 
 // DELETE - Remove custom username (revert to auto-generated)
-export async function DELETE() {
+export async function DELETE(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(
@@ -216,8 +223,14 @@ export async function DELETE() {
       );
     }
 
-    const member = await prisma.members.findUnique({
-      where: { clerk_id: user.id }
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          ...(user.clerk_id ? [{ google_id: user.clerk_id }] : [])
+        ]
+      }
     });
 
     if (!member) {

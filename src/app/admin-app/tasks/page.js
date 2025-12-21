@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import { PencilIcon, TrashIcon, PlusIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon, ShareIcon } from '@heroicons/react/24/outline';
 import AdminLayout from '../components/AdminLayout';
@@ -10,7 +10,7 @@ import { GlassContainer, GlassCard, GlassButton } from '@/components/GlassLayout
 import { useResponsive, useGlassEffects } from '@/hooks/useGlassTheme';
 
 export default function TasksPage() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const router = useRouter();
   const { responsive, isMobile, isTablet } = useResponsive();
   const { getGlassClasses, glassConfig } = useGlassEffects();
@@ -90,10 +90,10 @@ export default function TasksPage() {
   }, [page, search]);
 
   useEffect(() => {
-    if (user?.primaryEmailAddress?.emailAddress) {
+    if (user?.email) {
       fetchStats();
     }
-  }, [user?.primaryEmailAddress?.emailAddress]);
+  }, [user?.email]);
 
   const fetchStats = async () => {
     try {

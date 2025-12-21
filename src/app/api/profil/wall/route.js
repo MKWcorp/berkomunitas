@@ -1,25 +1,24 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 export async function POST(request) {
   try {
     // Check if user is authenticated
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in to post on profile walls.' },
         { status: 401 }
       );
-    }
-
-    // Get the logged-in member's data
-    const currentMember = await prisma.members.findUnique({
+    }    // Get the logged-in member's data
+    const currentMember = await prisma.members.findFirst({
       where: {
-        clerk_id: user.id
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
       }
     });
 

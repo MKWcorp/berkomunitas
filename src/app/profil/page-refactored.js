@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { ExclamationTriangleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 // Hooks
@@ -21,7 +21,7 @@ const TABS = [
 ];
 
 export default function ProfileDashboard() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const searchParams = useSearchParams();
   const isRequired = searchParams.get('required') === 'true';
   

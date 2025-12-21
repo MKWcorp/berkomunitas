@@ -48,11 +48,9 @@ export default function BadgesTab({ badges, level }) {
         <div className="flex items-center mb-6">
           <TrophyIcon className="h-6 w-6 text-purple-600 mr-3" />
           <h2 className="text-xl font-semibold text-gray-900">Lencana Saya</h2>
-        </div>
-
-        {badges && badges.length > 0 ? (
+        </div>        {badges && badges.length > 0 ? (
           <div className="flex flex-wrap gap-3 justify-center">
-            {badges.map((badge) => {
+            {badges.map((badge, index) => {
               // Generate Shields.io URL with customization
               const badgeColor = badge.badge_color || 'blue';
               const badgeStyle = badge.badge_style || 'flat';
@@ -62,7 +60,7 @@ export default function BadgesTab({ badges, level }) {
               
               return (
                 <div 
-                  key={badge.id} 
+                  key={badge.id ? `badge-${badge.id}` : `badge-${index}`}
                   className="relative group"
                   title={`${badge.badge_name}\n${badge.description}\nDiraih: ${badge.earned_date ? new Date(badge.earned_date).toLocaleDateString('id-ID') : 'Tanggal tidak tersedia'}`}
                 >

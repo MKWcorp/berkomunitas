@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useUser, SignedIn } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { 
@@ -19,7 +19,7 @@ import {
 import UserProfileDropdown from '../../components/UserProfileDropdown';
 
 export default function AdminNavigation() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSubdomain, setIsSubdomain] = useState(false);
   const pathname = usePathname();
@@ -99,27 +99,27 @@ export default function AdminNavigation() {
                 </Link>
               );
             })}
-          </div>
-
-          {/* User Profile Section */}
+          </div>          {/* User Profile Section */}
           <div className="flex items-center space-x-4">
-            <SignedIn>
-              {/* User info display */}
-              <div className="hidden sm:flex items-center space-x-3">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
-                    {user?.firstName} {user?.lastName}
+            {user && (
+              <>
+                {/* User info display */}
+                <div className="hidden sm:flex items-center space-x-3">
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900">
+                      {user?.name || user?.email?.split('@')[0]}
+                    </div>
+                    <div className="text-xs text-gray-500">Administrator</div>
                   </div>
-                  <div className="text-xs text-gray-500">Administrator</div>
+                  <UserProfileDropdown />
                 </div>
-                <UserProfileDropdown />
-              </div>
-              
-              {/* Mobile User Profile */}
-              <div className="sm:hidden">
-                <UserProfileDropdown />
-              </div>
-            </SignedIn>
+                
+                {/* Mobile User Profile */}
+                <div className="sm:hidden">
+                  <UserProfileDropdown />
+                </div>
+              </>
+            )}
 
             {/* Mobile Menu Button */}
             <div className="lg:hidden">
@@ -162,24 +162,23 @@ export default function AdminNavigation() {
                 </Link>
               );
             })}
-          </div>
-          
+          </div>          
           {/* Mobile User Info */}
-          <SignedIn>
+          {user && (
             <div className="px-4 py-3 border-t border-gray-200/50 bg-gray-50/80">
               <div className="flex items-center space-x-3">
                 <div className="flex-1">
                   <div className="text-sm font-medium text-gray-900">
-                    {user?.firstName} {user?.lastName}
+                    {user?.name || user?.email?.split('@')[0]}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {user?.primaryEmailAddress?.emailAddress}
+                    {user?.email}
                   </div>
                   <div className="text-xs text-blue-600 font-medium">Administrator</div>
                 </div>
               </div>
             </div>
-          </SignedIn>
+          )}
         </div>
       )}
     </nav>

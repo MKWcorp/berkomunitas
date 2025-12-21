@@ -1,22 +1,17 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-export async function POST() {
+import { getCurrentUser } from '@/lib/ssoAuth';
+export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
-      return NextResponse.json({ error: 'No userId found' }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ error: 'No user found' }, { status: 401 });
     }
-
-    const user = await currentUser();
     
     // Check if member already exists
     const existingMember = await prisma.members.findUnique({
-      where: { clerk_id: userId }
+      where: { id: user.id }
     });
 
     if (existingMember) {
@@ -25,30 +20,28 @@ export async function POST() {
         message: 'Member already exists',
         member: existingMember 
       });
-    }    // Create new member
+    }
+
+    // Create new member
     const newMember = await prisma.members.create({
       data: {
-        clerk_id: userId,
-        nama_lengkap: user.fullName || user.firstName + ' ' + user.lastName || null,
+        google_id: user.google_id,
+        nama_lengkap: user.name || null,
+        email: user.email,
         tanggal_daftar: new Date(),
         loyalty_point: 0
       }
     });
 
     // Create email record in member_emails table if user has email
-    if (user.emailAddresses && user.emailAddresses.length > 0) {
-      const primaryEmail = user.primaryEmailAddress || user.emailAddresses[0];
-      
-      const emailData = user.emailAddresses.map((emailObj) => ({
-        clerk_id: userId,
-        email: emailObj.emailAddress,
-        is_primary: emailObj.id === primaryEmail.id,
-        verified: emailObj.verification?.status === 'verified' || false,
-      }));
-
-      await prisma.member_emails.createMany({
-        data: emailData,
-        skipDuplicates: true,
+    if (user.email) {
+      await prisma.member_emails.create({
+        data: {
+          member_id: newMember.id,
+          email: user.email,
+          is_primary: true,
+          verified: true, // Google emails are pre-verified
+        }
       });
     }
 

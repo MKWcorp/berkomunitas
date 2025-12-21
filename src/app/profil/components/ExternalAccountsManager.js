@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   LinkIcon, 
   TrashIcon,
@@ -45,7 +45,7 @@ const getProviderColor = (provider) => {
 };
 
 export default function ExternalAccountsManager() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [loading, setLoading] = useState({});
   const [message, setMessage] = useState('');
 

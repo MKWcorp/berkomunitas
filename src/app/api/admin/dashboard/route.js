@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
-import { auth } from '@clerk/nextjs/server';
+import prisma from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
 
-export async function GET(_request) {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ _error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user has admin privilege using user_privileges table
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: userId,
+      where: { member_id: user.id,
         privilege: 'admin',
         is_active: true,
         OR: [

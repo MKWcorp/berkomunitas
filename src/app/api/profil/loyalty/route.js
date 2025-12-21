@@ -1,39 +1,25 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '../../../../../lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/profil/loyalty
  * Fetches the loyalty points for the currently authenticated member.
  */
-export async function GET() {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Clerk's auth() doesn't directly give us the email on the server-side for API routes.
-    // A common pattern is to have the user's email stored in your own database
-    // linked by the clerk userId, or to fetch it if needed.
-    // For this case, we'll assume the user's profile is in our DB and can be found.
-    // Let's find the user via Clerk's own API first to get their email.
-    // Note: This requires the Clerk Backend SDK. For simplicity, we'll assume
-    // the email is already in our `members` table, linked from when the user was created.
-    // A more robust solution would be to query Clerk's API if the email isn't found.
-    
-    // Let's find the member by their clerk_id if it's stored.
-    // Assuming you have a 'clerkId' field on your Member model.
-    // If not, we'll have to rely on the email which we don't have here directly.
-    // Let's adjust the logic to expect the email to be passed from the client,
-    // or even better, let's assume the `members` table has a `clerkId`.
-    
-    // A practical approach is to find the user by their clerkId.
-    // Let's assume your `members` table has a field `clerkId` that stores the `userId` from Clerk.
-    const member = await prisma.members.findUnique({
+    }    // Find the member by email, google_id, or clerk_id
+    const member = await prisma.members.findFirst({
       where: {
-        clerk_id: userId, // Menggunakan clerk_id sesuai schema yang baru
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
       },
       select: {
         loyalty_point: true,

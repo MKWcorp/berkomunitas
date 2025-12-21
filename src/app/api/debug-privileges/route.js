@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import prisma from '../../../../lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // Debug endpoint to check user privileges
-export async function GET() {
+export async function GET(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json({ 
@@ -16,16 +16,14 @@ export async function GET() {
 
     // Get member data with detailed info
     const member = await prisma.members.findUnique({
-      where: { clerk_id: user.id },
+      where: { google_id: user.id },
       include: { 
         user_privileges: true,
         member_emails: true
       }
-    });
-
-    return NextResponse.json({
+    });    return NextResponse.json({
       user_id: user.id,
-      user_email: user.primaryEmailAddress?.emailAddress,
+      user_email: user.email,
       member_found: !!member,
       member_id: member?.id,
       member_email: member?.email,

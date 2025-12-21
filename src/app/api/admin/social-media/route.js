@@ -1,23 +1,22 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '@/utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/admin/social-media
  * Get all members with their social media profiles (including those without any)
  */
-export async function GET() {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user is admin
     const userPrivileges = await prisma.user_privileges.findFirst({
-      where: { 
-        clerk_id: userId,
+      where: { member_id: user.id,
         privilege: 'admin',
         is_active: true
       }
@@ -59,7 +58,7 @@ export async function GET() {
       nama_lengkap: member.nama_lengkap,
       foto_profil_url: member.foto_profil_url,
       email: member.member_emails[0]?.email || 'Tidak ada email',
-      clerk_id: member.clerk_id,
+      google_id: member.clerk_id,
       tanggal_daftar: member.tanggal_daftar,
       has_social_media: member.profil_sosial_media.length > 0,
       social_media_count: member.profil_sosial_media.length,
@@ -88,7 +87,7 @@ export async function GET() {
               nama_lengkap: member.nama_lengkap,
               foto_profil_url: member.foto_profil_url,
               email: member.member_emails[0]?.email || 'Tidak ada email',
-              clerk_id: member.clerk_id
+              google_id: member.clerk_id
             }
           });
         });
@@ -120,16 +119,15 @@ export async function GET() {
  */
 export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user is admin
     const userPrivileges = await prisma.user_privileges.findFirst({
-      where: { 
-        clerk_id: userId,
+      where: { member_id: user.id,
         privilege: 'admin',
         is_active: true
       }

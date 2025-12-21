@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSSOUser } from '@/hooks/useSSOUser';
 import AdminLayout from "../components/AdminLayout";
 import AdminModal from "../components/AdminModal";
 import { 
@@ -157,7 +157,7 @@ function BadgeCustomizer({ badge, onChange }) {
 }
 
 export default function BadgesTab() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -197,7 +197,7 @@ export default function BadgesTab() {
     try {
       const res = await fetch("/api/admin/badges", {
         headers: {
-          ...(user?.primaryEmailAddress?.emailAddress ? { "x-user-email": user.primaryEmailAddress.emailAddress } : {})
+          ...(user?.email ? { "x-user-email": user.email } : {})
         }
       });
       if (!res.ok) throw new Error("Gagal memuat data lencana");
@@ -213,7 +213,7 @@ export default function BadgesTab() {
     try {
       const res = await fetch("/api/admin/members", {
         headers: {
-          ...(user?.primaryEmailAddress?.emailAddress ? { "x-user-email": user.primaryEmailAddress.emailAddress } : {})
+          ...(user?.email ? { "x-user-email": user.email } : {})
         }
       });
       if (res.ok) {
@@ -236,7 +236,7 @@ export default function BadgesTab() {
     console.log('🔄 Loading member badges...');
     setMemberBadgeLoading(true);
     try {
-      const userEmail = user?.primaryEmailAddress?.emailAddress;
+      const userEmail = user?.email;
       console.log('👤 User email for auth:', userEmail);
       
       const headers = {
@@ -261,7 +261,7 @@ export default function BadgesTab() {
           member: {
             id: mb.members.id,
             name: mb.members.nama_lengkap || 'Nama tidak tersedia',
-            clerk_id: mb.members.clerk_id
+            google_id: mb.members.clerk_id
           },
           badge: mb.badges
         }));
@@ -325,7 +325,7 @@ export default function BadgesTab() {
         method,
         headers: {
           "Content-Type": "application/json",
-          ...(user?.primaryEmailAddress?.emailAddress ? { "x-user-email": user.primaryEmailAddress.emailAddress } : {}),
+          ...(user?.email ? { "x-user-email": user.email } : {}),
         },
         body: JSON.stringify(form),
       });
@@ -345,11 +345,11 @@ export default function BadgesTab() {
 
   async function handleDelete(id) {
     if (!confirm("Yakin ingin menghapus lencana ini?")) return;
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
     try {
       const res = await fetch(`/api/admin/badges/${id}`, {
         method: "DELETE",
-        headers: { "x-user-email": user.primaryEmailAddress.emailAddress },
+        headers: { "x-user-email": user.email },
       });
       if (!res.ok) {
         const errData = await res.json();
@@ -375,7 +375,7 @@ export default function BadgesTab() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(user?.primaryEmailAddress?.emailAddress ? { "x-user-email": user.primaryEmailAddress.emailAddress } : {})
+          ...(user?.email ? { "x-user-email": user.email } : {})
         },
         body: JSON.stringify({
           badgeId: selectedBadgeForBatch,
@@ -399,12 +399,12 @@ export default function BadgesTab() {
 
   async function handleRemoveMemberBadge(memberId, badgeId) {
     if (!confirm('Yakin ingin menghapus lencana dari member ini?')) return;
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
 
     try {
       const res = await fetch(`/api/admin/member-badges/remove/${memberId}/${badgeId}`, {
         method: 'DELETE',
-        headers: { "x-user-email": user.primaryEmailAddress.emailAddress }
+        headers: { "x-user-email": user.email }
       });
 
       if (!res.ok) throw new Error('Gagal menghapus lencana member');

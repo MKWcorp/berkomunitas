@@ -12,7 +12,7 @@ const useAutoScroll = (users, currentUserId, currentUsername) => {
     // Get current user email for additional matching
     let currentUserEmail = null;
     if (typeof window !== 'undefined' && window.Clerk?.user) {
-      currentUserEmail = window.Clerk.user.primaryEmailAddress?.emailAddress;
+      currentUserEmail = null  // TODO: Replace with proper SSO user access;
     }
 
     // Find current user - try multiple matching strategies
@@ -62,7 +62,7 @@ const useAutoScroll = (users, currentUserId, currentUsername) => {
     // Get current user email for fallback matching
     let currentUserEmail = null;
     if (typeof window !== 'undefined' && window.Clerk?.user) {
-      currentUserEmail = window.Clerk.user.primaryEmailAddress?.emailAddress;
+      currentUserEmail = null  // TODO: Replace with proper SSO user access;
     }
 
     // Optimized user search

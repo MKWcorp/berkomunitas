@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-12-21T19:35:13.241812",
+  "migration_type": "cascade_delete_task_submissions",
+  "success": true,
+  "initial_state": {
+    "fk_exists": true,
+    "is_cascade": false,
+    "constraint_details": {
+      "constraint_name": "fk_task_submissions_tugas_ai",
+      "delete_action_code": "a",
+      "update_action_code": "a",
+      "delete_action": "NO ACTION",
+      "column_name": "id_task",
+      "referenced_table": "tugas_ai",
+      "referenced_column": "id"
+    },
+    "submissions_count": 10290,
+    "tasks_count": 11831
+  },
+  "migration_needed": true,
+  "migration_steps": [
+    "Drop existing constraint: fk_task_submissions_tugas_ai",
+    "Create new constraint with ON DELETE CASCADE"
+  ]
+}

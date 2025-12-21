@@ -1,15 +1,12 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { getCurrentUser } from '@/lib/ssoAuth';
 import { grantPrivilege, revokePrivilege } from '../../../utils/privilegeChecker';
-import { auth } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
-
 // GET - List all privileges for the authenticated user (or all if admin)
 export async function GET(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -22,8 +19,7 @@ export async function GET(request) {
     // If requesting for another user, require admin privilege
     if (user_clerk_id && user_clerk_id !== userId) {
       const adminPrivilege = await prisma.user_privileges.findFirst({
-        where: {
-          clerk_id: userId, // Gunakan clerk_id sesuai schema yang baru
+        where: { member_id: user.id, // Gunakan clerk_id sesuai schema yang baru
           privilege: 'admin',
           is_active: true,
           OR: [
@@ -38,8 +34,7 @@ export async function GET(request) {
     }
 
     const privileges = await prisma.user_privileges.findMany({
-      where: {
-        clerk_id: target_clerk_id, // Gunakan clerk_id sesuai schema yang baru
+      where: { google_id: target_clerk_id, // Gunakan clerk_id sesuai schema yang baru
         is_active: true
       },
       orderBy: {
@@ -63,15 +58,14 @@ export async function GET(request) {
 // POST - Grant privilege (admin only)
 export async function POST(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Only admin can grant privilege
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: userId, // Gunakan clerk_id sesuai schema yang baru
+      where: { member_id: user.id, // Gunakan clerk_id sesuai schema yang baru
         privilege: 'admin',
         is_active: true,
         OR: [
@@ -106,8 +100,7 @@ export async function POST(request) {
 
     if (expiresAt) {
       await prisma.user_privileges.updateMany({
-        where: {
-          clerk_id: user_clerk_id, // Gunakan clerk_id sesuai schema yang baru
+        where: { google_id: user_clerk_id, // Gunakan clerk_id sesuai schema yang baru
           privilege: privilege.toLowerCase()
         },
         data: {
@@ -133,15 +126,14 @@ export async function POST(request) {
 // DELETE - Revoke privilege (admin only)
 export async function DELETE(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Only admin can revoke privilege
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: userId, // Gunakan clerk_id sesuai schema yang baru
+      where: { member_id: user.id, // Gunakan clerk_id sesuai schema yang baru
         privilege: 'admin',
         is_active: true,
         OR: [

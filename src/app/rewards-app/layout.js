@@ -1,4 +1,4 @@
-import { ClerkProvider } from '@clerk/nextjs';
+// SSO Implementation - No Clerk provider needed
 import RewardsLayout from './components/RewardsLayout';
 import '../globals.css';
 
@@ -9,10 +9,8 @@ export const metadata = {
 
 export default function RewardsAppLayout({ children }) {
   return (
-    <ClerkProvider>
-      <RewardsLayout>
-        {children}
-      </RewardsLayout>
-    </ClerkProvider>
+    <RewardsLayout>
+      {children}
+    </RewardsLayout>
   );
 }

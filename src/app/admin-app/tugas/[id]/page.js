@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   ArrowLeftIcon, 
   CheckCircleIcon, 
@@ -17,7 +17,7 @@ import Image from 'next/image';
 export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -40,7 +40,7 @@ export default function TaskDetailPage() {
     try {
       const response = await fetch(`/api/admin/tugas/${params.id}`, {
         headers: {
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         }
       });
       
@@ -77,11 +77,11 @@ export default function TaskDetailPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({
           ...editForm,
-          verified_by: user?.primaryEmailAddress?.emailAddress
+          verified_by: user?.email
         })
       });
 

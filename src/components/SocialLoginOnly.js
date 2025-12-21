@@ -1,17 +1,20 @@
+// DEPRECATED: This component is no longer used after SSO migration
+// Clerk has been removed from the project
+// Use the new SSO login flow at /login instead
 "use client";
 
-import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function SocialLoginOnly({ mode = "signin" }) {
-  const { signIn } = useSignIn();
-  const { signUp } = useSignUp();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState({ facebook: false, google: false });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSocialLogin = async (provider) => {
-    setIsLoading(prev => ({ ...prev, [provider]: true }));
+    setIsLoading(true);
+    // Redirect to new SSO login page
+    router.push('/login');
+  };
 
     try {
       if (mode === "signin") {

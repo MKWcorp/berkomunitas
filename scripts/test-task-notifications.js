@@ -8,8 +8,7 @@ async function testTaskNotifications() {
 
     // 1. Find a member to test with
     const testMember = await prisma.members.findFirst({
-      where: {
-        clerk_id: { not: null }
+      where: { google_id: { not: null }
       }
     });
 

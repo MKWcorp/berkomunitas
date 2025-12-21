@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSSOUser } from '@/hooks/useSSOUser';
 import AdminLayout from '../components/AdminLayout';
 import { 
   AdminPageLayout,
@@ -230,7 +230,7 @@ function BadgeModal({
 }
 
 export default function BadgesPage() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import Link from 'next/link';
 import { 
   BellIcon, 
@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function NotificationBell() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);

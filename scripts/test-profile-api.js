@@ -22,18 +22,17 @@ async function testProfileAPI() {
     
     // Hapus data test jika ada
     await prisma.member_emails.deleteMany({
-      where: { clerk_id: testClerkId }
+      where: { google_id: testClerkId }
     });
     await prisma.members.deleteMany({
-      where: { clerk_id: testClerkId }
+      where: { google_id: testClerkId }
     });
 
     // Simulasi create member (seperti yang dilakukan API profil)
     const member = await prisma.$transaction(async (tx) => {
       // Create member
       const newMember = await tx.members.create({
-        data: {
-          clerk_id: testClerkId,
+        data: { google_id: testClerkId,
           nama_lengkap: 'Test User',
           nomer_wa: '081234567890'
         }
@@ -43,13 +42,13 @@ async function testProfileAPI() {
       await tx.member_emails.createMany({
         data: [
           {
-            clerk_id: testClerkId,
+            google_id: testClerkId,
             email: 'test@example.com',
             verified: true,
             is_primary: true
           },
           {
-            clerk_id: testClerkId,
+            google_id: testClerkId,
             email: 'test2@example.com',
             verified: false,
             is_primary: false
@@ -62,7 +61,7 @@ async function testProfileAPI() {
 
     console.log('✅ Member created successfully:', {
       id: member.id,
-      clerk_id: member.clerk_id,
+      google_id: member.clerk_id,
       nama_lengkap: member.nama_lengkap
     });
 
@@ -70,7 +69,7 @@ async function testProfileAPI() {
     console.log('\n2️⃣ Testing member retrieval with emails...');
     
     const memberWithEmails = await prisma.members.findUnique({
-      where: { clerk_id: testClerkId },
+      where: { google_id: testClerkId },
       include: {
         member_emails: {
           orderBy: [
@@ -113,8 +112,7 @@ async function testProfileAPI() {
       const emailsToRemove = currentEmails.filter(e => !newEmailSet.has(e.email));
       if (emailsToRemove.length > 0) {
         await tx.member_emails.deleteMany({
-          where: {
-            clerk_id: testClerkId,
+          where: { google_id: testClerkId,
             email: { in: emailsToRemove.map(e => e.email) }
           }
         });
@@ -126,7 +124,7 @@ async function testProfileAPI() {
       if (emailsToAdd.length > 0) {
         await tx.member_emails.createMany({
           data: emailsToAdd.map(email => ({
-            clerk_id: testClerkId,
+            google_id: testClerkId,
             email: email.email,
             verified: email.verified,
             is_primary: email.email === primaryEmail
@@ -139,8 +137,7 @@ async function testProfileAPI() {
       for (const newEmail of newEmails) {
         if (currentEmailSet.has(newEmail.email)) {
           await tx.member_emails.updateMany({
-            where: {
-              clerk_id: testClerkId,
+            where: { google_id: testClerkId,
               email: newEmail.email
             },
             data: {
@@ -153,14 +150,13 @@ async function testProfileAPI() {
 
       // Reset all emails to not primary first
       await tx.member_emails.updateMany({
-        where: { clerk_id: testClerkId },
+        where: { google_id: testClerkId },
         data: { is_primary: false }
       });
 
       // Set the primary email
       await tx.member_emails.updateMany({
-        where: {
-          clerk_id: testClerkId,
+        where: { google_id: testClerkId,
           email: primaryEmail
         },
         data: { is_primary: true }
@@ -169,7 +165,7 @@ async function testProfileAPI() {
 
     // Verify the sync
     const syncedMember = await prisma.members.findUnique({
-      where: { clerk_id: testClerkId },
+      where: { google_id: testClerkId },
       include: {
         member_emails: {
           orderBy: [
@@ -192,10 +188,10 @@ async function testProfileAPI() {
     // Cleanup
     console.log('\n🧹 Cleaning up test data...');
     await prisma.member_emails.deleteMany({
-      where: { clerk_id: testClerkId }
+      where: { google_id: testClerkId }
     });
     await prisma.members.deleteMany({
-      where: { clerk_id: testClerkId }
+      where: { google_id: testClerkId }
     });
 
     console.log('✅ Test completed successfully!');

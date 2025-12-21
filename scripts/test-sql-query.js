@@ -13,7 +13,7 @@ async function testSQLQuery() {
   try {
     // Get test data
     const member = await prisma.members.findFirst({
-      where: { clerk_id: { not: null } },
+      where: { google_id: { not: null } },
       select: { id: true, nama_lengkap: true }
     });
 
