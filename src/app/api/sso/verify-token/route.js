@@ -33,10 +33,9 @@ export async function POST(request) {
         coin: true,
         loyalty_point: true,
         last_login_at: true,
-        google_id: true,
         user_privileges: {
           select: {
-            privilege_name: true,
+            privilege: true,
           },
         },
       },
@@ -62,7 +61,7 @@ export async function POST(request) {
 
     // Check if user is admin
     const isAdmin = member.user_privileges.some(
-      p => p.privilege_name === 'admin' || p.privilege_name === 'super_admin'
+      p => p.privilege === 'admin' || p.privilege === 'super_admin'
     );
 
     return NextResponse.json({
