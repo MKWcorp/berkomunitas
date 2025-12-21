@@ -168,7 +168,8 @@ export async function POST(request) {
       // fetch updated member to return accurate coin/loyalty values
       const updatedMember = await prisma.members.findUnique({ where: { id: member.id } });
 
-      return NextResponse.json({
+      // Create response with cookies
+      const response = NextResponse.json({
         success: true,
         accessToken,
         refreshToken,
@@ -181,6 +182,25 @@ export async function POST(request) {
           loyaltyPoint: updatedMember.loyalty_point,
         },
       });
+
+      // Set HttpOnly cookies for secure token storage
+      response.cookies.set('access_token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+        path: '/',
+      });
+
+      response.cookies.set('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: '/',
+      });
+
+      return response;
     } catch (txError) {
       console.error('SSO Transaction Error:', txError);
       return NextResponse.json(
