@@ -7,7 +7,7 @@ export async function GET(request) {
     console.log('🔍 Debug Admin API called...');
     
     const user = await getCurrentUser(request);
-    console.log('Clerk userId:', userId);
+    console.log('SSO user:', user?.id);
     
     if (!user) {
       return NextResponse.json({ 
@@ -26,9 +26,9 @@ export async function GET(request) {
     });
     
     console.log('Member found:', member ? {
-      id: member._id,
+      id: member.id,
       name: member.name,
-      google_id: member.clerk_id,
+      google_id: member.google_id,
       email: member.member_emails[0]?.email
     } : 'Not found');
     
@@ -36,7 +36,7 @@ export async function GET(request) {
       return NextResponse.json({ 
         success: false, 
         error: "Member tidak ditemukan",
-        debug: { userId, memberFound: false }
+        debug: { userId: user.id, memberFound: false }
       }, { status: 404 });
     }
     
@@ -61,7 +61,7 @@ export async function GET(request) {
         id: member.id,
         name: member.name,
         email: member.member_emails[0]?.email,
-        google_id: member.clerk_id
+        google_id: member.google_id
       },
       privileges: privileges.map(p => ({
         privilege: p.privilege,
@@ -69,7 +69,7 @@ export async function GET(request) {
         granted_at: p.granted_at
       })),
       debug: {
-        userId,
+        userId: user.id,
         memberFound: true,
         privilegesCount: privileges.length,
         hasActiveAdmin: isAdmin

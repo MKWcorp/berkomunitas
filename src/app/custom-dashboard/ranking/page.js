@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSSOUser } from '@/hooks/useSSOUser';
 import RankingCanvas from '@/components/ranking/RankingCanvas';
 import UserDetailModal from '@/components/ranking/UserDetailModal';
 import { RANKING_LEVELS, findUserLevel, getNextLevel, calculateLoyaltyNeeded } from '@/lib/rankingLevels';
 
 export default function RankingPage() {
+  const router = useRouter();
   const { user, isLoaded } = useSSOUser();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +16,11 @@ export default function RankingPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
+
+  // Redirect to drwcorp by default
+  useEffect(() => {
+    router.replace('/custom-dashboard/drwcorp');
+  }, [router]);
 
   // Custom ultra slow scroll function - CONTAINER SCROLL VERSION
   const ultraSlowScrollToElement = (element, duration = 5000) => {

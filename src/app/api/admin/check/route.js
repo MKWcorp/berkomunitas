@@ -32,7 +32,7 @@ export async function GET(request) {
         success: true,
         isAdmin: true,
         message: 'Admin access confirmed',
-        userId: userId
+        userId: user.id
       });
     } else {
       return NextResponse.json({ 

@@ -79,22 +79,7 @@ export default function HomePage() {
                 >
                   Dashboard ({user.nama_lengkap || 'User'})
                 </Link>
-              ) : (
-                <>
-                  <Link 
-                    href="/login"
-                    className="px-8 py-3 bg-white hover:bg-white/90 rounded-full text-blue-600 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md text-center"
-                  >
-                    🚀 Mulai Sekarang
-                  </Link>
-                  <Link 
-                    href="/login"
-                    className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white font-semibold backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 text-center"
-                  >
-                    Login
-                  </Link>
-                </>
-              )}
+              ) : null}
             </div>
 
             {/* Version Info */}

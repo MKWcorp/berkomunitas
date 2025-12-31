@@ -109,12 +109,9 @@ export default function LoginPage() {
                 className="h-16 mx-auto"
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Selamat Datang
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Login
             </h1>
-            <p className="text-gray-600">
-              Login ke Berkomunitas dengan akun Google Anda
-            </p>
           </div>
 
           {/* Error Message */}
@@ -145,80 +142,6 @@ export default function LoginPage() {
                 />
               )}
             </div>
-
-            {/* Info Box */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg 
-                  className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-                  />
-                </svg>
-                <div>
-                  <h3 className="font-semibold text-blue-900 text-sm mb-1">
-                    Untuk User Lama (Clerk)
-                  </h3>
-                  <p className="text-blue-800 text-xs leading-relaxed">
-                    Jika Anda sudah punya akun sebelumnya, gunakan email yang sama 
-                    saat login dengan Google. Data Anda (coin, loyalty point, dll) 
-                    akan otomatis tersinkronisasi.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Benefits */}
-            <div className="mt-6 space-y-3">
-              <p className="text-sm font-semibold text-gray-700">Keuntungan login:</p>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>🎁 Dapatkan <strong>1 coin</strong> bonus setiap login</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>💎 Kumpulkan loyalty point untuk reward eksklusif</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>🔒 Akses aman dengan Google OAuth</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>🌐 Satu akun untuk semua platform DRW</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500">
-              Dengan login, Anda menyetujui{' '}
-              <a href="/terms" className="text-blue-600 hover:underline">
-                Syarat & Ketentuan
-              </a>{' '}
-              dan{' '}
-              <a href="/privacy" className="text-blue-600 hover:underline">
-                Kebijakan Privasi
-              </a>
-            </p>
           </div>
         </div>
       </div>

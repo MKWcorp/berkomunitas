@@ -31,7 +31,7 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 
 function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mode = 'create' }) {
   const [form, setForm] = useState({
-    google_id: '',
+    email: '',
     privilege: 'user',
     is_active: true,
     ...privilege
@@ -40,14 +40,14 @@ function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mod
   useEffect(() => {
     if (privilege) {
       setForm({
-        google_id: '',
+        email: privilege.members?.email || privilege.members?.member_emails?.[0]?.email || '',
         privilege: 'user',
         is_active: true,
         ...privilege
       });
     } else {
       setForm({
-        google_id: '',
+        email: '',
         privilege: 'user',
         is_active: true
       });
@@ -84,18 +84,19 @@ function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mod
         <div className="grid grid-cols-1 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Clerk ID <span className="text-red-500">*</span>
+              Email Member <span className="text-red-500">*</span>
             </label>
             <input
-              type="text"
+              type="email"
               className="w-full backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50"
-              placeholder="user_xxxxxxxxx"
-              value={form.clerk_id}
-              onChange={(e) => setForm({...form, google_id: e.target.value})}
+              placeholder="member@email.com"
+              value={form.email}
+              onChange={(e) => setForm({...form, email: e.target.value})}
               required
+              disabled={mode === 'edit'}
             />
             <p className="text-xs text-gray-500 mt-1">
-              ID unik dari Clerk untuk user yang akan diberikan privilege
+              Email member yang akan diberikan privilege
             </p>
           </div>
 
@@ -158,7 +159,7 @@ function PrivilegeModal({ open, onClose, privilege = null, onSave, onDelete, mod
             <GlassButton 
               variant="primary" 
               onClick={() => onSave(form)}
-              disabled={!form.clerk_id || !form.privilege}
+              disabled={!form.email || !form.privilege}
             >
               {mode === 'create' ? 'Tambah Privilege' : 'Simpan Perubahan'}
             </GlassButton>
@@ -308,10 +309,13 @@ export default function PrivilegesPage() {
   }
 
   // Filter and sort logic
-  let filteredPrivileges = privileges.filter(privilege =>
-    privilege.clerk_id?.toLowerCase().includes(search.toLowerCase()) ||
-    privilege.privilege?.toLowerCase().includes(search.toLowerCase())
-  );
+  let filteredPrivileges = privileges.filter(privilege => {
+    const memberEmail = privilege.members?.email || privilege.members?.member_emails?.[0]?.email || '';
+    const memberName = privilege.members?.nama_lengkap || '';
+    return memberEmail.toLowerCase().includes(search.toLowerCase()) ||
+      memberName.toLowerCase().includes(search.toLowerCase()) ||
+      privilege.privilege?.toLowerCase().includes(search.toLowerCase());
+  });
 
   filteredPrivileges = filteredPrivileges.sort((a, b) => {
     let v1 = a[sortConfig.key] ?? '';
@@ -363,7 +367,7 @@ export default function PrivilegesPage() {
               <AdminSearchInput
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari Clerk ID, privilege..."
+                placeholder="Cari email, nama, privilege..."
               />
               <GlassButton 
                 variant="primary" 
@@ -418,11 +422,11 @@ export default function PrivilegesPage() {
                   ID
                 </AdminTableHeaderCell>
                 <AdminTableHeaderCell 
-                  onClick={() => handleSort('clerk_id')} 
+                  onClick={() => handleSort('member_id')} 
                   sortable 
-                  sortDirection={sortConfig.key === 'clerk_id' ? sortConfig.direction : null}
+                  sortDirection={sortConfig.key === 'member_id' ? sortConfig.direction : null}
                 >
-                  Clerk ID
+                  Member
                 </AdminTableHeaderCell>
                 <AdminTableHeaderCell 
                   onClick={() => handleSort('privilege')} 
@@ -441,8 +445,15 @@ export default function PrivilegesPage() {
                   return (
                     <AdminTableRow key={privilege.id}>
                       <AdminTableCell>{privilege.id}</AdminTableCell>
-                      <AdminTableCell className="font-mono text-sm">
-                        {privilege.clerk_id}
+                      <AdminTableCell>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {privilege.members?.nama_lengkap || 'Tidak ada nama'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {privilege.members?.email || privilege.members?.member_emails?.[0]?.email || '-'}
+                          </div>
+                        </div>
                       </AdminTableCell>
                       <AdminTableCell>
                         <AdminStatusBadge 

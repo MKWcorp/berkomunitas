@@ -14,7 +14,10 @@ export async function GET(request) {
   const privileges = await prisma.user_privileges.findMany({
     include: {
       members: {
-        include: {
+        select: {
+          id: true,
+          nama_lengkap: true,
+          email: true,
           member_emails: {
             select: {
               email: true
@@ -49,31 +52,54 @@ export async function POST(request) {
     );
   }
   
-  const { clerk_id, privilege, is_active } = await request.json();
+  const { email, privilege, is_active } = await request.json();
 
-  // Get member from clerk_id
-  const member = await prisma.members.findUnique({
-    where: { google_id: clerk_id }
+  if (!email) {
+    return NextResponse.json({ error: 'Email diperlukan' }, { status: 400 });
+  }
+
+  // Get member from email (check both members.email and member_emails)
+  let member = await prisma.members.findUnique({
+    where: { email: email }
   });
   
   if (!member) {
-    return NextResponse.json({ error: 'Member tidak ditemukan' }, { status: 400 });
+    // Try to find via member_emails
+    const memberEmail = await prisma.member_emails.findUnique({
+      where: { email: email },
+      include: { members: true }
+    });
+    member = memberEmail?.members;
   }
   
-  // Check if privilege already exists for this user
+  if (!member) {
+    return NextResponse.json({ error: 'Member dengan email tersebut tidak ditemukan' }, { status: 400 });
+  }
+  
+  // Check if privilege already exists for this member
   const existing = await prisma.user_privileges.findFirst({
-    where: { google_id: clerk_id, privilege }
+    where: { member_id: member.id, privilege }
   });
   
   if (existing) {
-    return NextResponse.json({ error: 'Privilege sudah ada untuk user ini' }, { status: 400 });
+    return NextResponse.json({ error: 'Privilege sudah ada untuk member ini' }, { status: 400 });
   }
   
   const newPrivilege = await prisma.user_privileges.create({
-    data: { google_id: clerk_id, // Gunakan clerk_id sesuai schema yang baru
+    data: {
+      member_id: member.id,
       privilege,
       is_active: is_active ?? true,
       granted_at: new Date()
+    },
+    include: {
+      members: {
+        select: {
+          id: true,
+          nama_lengkap: true,
+          email: true
+        }
+      }
     }
   });
 
