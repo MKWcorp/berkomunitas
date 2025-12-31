@@ -1,16 +1,13 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { auth } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 // GET /api/members/current - Get current logged in member data
 export async function GET(request) {
   try {
     // Get authenticated user from Clerk
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({
         success: false,
         message: 'Authentication required'
@@ -19,7 +16,7 @@ export async function GET(request) {
 
     // Find member by clerk_id
     const member = await prisma.members.findFirst({
-      where: { clerk_id: userId },
+      where: { id: user.id },
       select: {
         id: true,
         nama_lengkap: true,
@@ -27,7 +24,7 @@ export async function GET(request) {
         tanggal_daftar: true,
         loyalty_point: true,
         coin: true,
-        clerk_id: true,
+        google_id: true,
         status_kustom: true
       }
     });
@@ -48,7 +45,7 @@ export async function GET(request) {
         tanggal_daftar: member.tanggal_daftar,
         loyalty_point: member.loyalty_point,
         coin: member.coin,
-        clerk_id: member.clerk_id,
+        google_id: member.clerk_id,
         status_kustom: member.status_kustom
       }
     });

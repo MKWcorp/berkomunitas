@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../utils/prisma';
+import prisma from '@/lib/prisma';
 
 // DRW Skincare API Configuration
 const DRW_API_URL = 'https://drwgroup.id/apis/reseller/get';
@@ -307,14 +307,13 @@ export async function PUT(request) {
       // Get member's clerk_id for privilege update
       const member = await prisma.members.findUnique({
         where: { id: test_member_id },
-        select: { clerk_id: true }
+        select: { google_id: true }
       });
 
       if (member?.clerk_id) {
         // Check if privilege already exists
         const existingPrivilege = await prisma.user_privileges.findFirst({
-          where: {
-            clerk_id: member.clerk_id,
+          where: { google_id: member.clerk_id,
             privilege: 'berkomunitasplus'
           }
         });
@@ -333,7 +332,7 @@ export async function PUT(request) {
           // Create new privilege
           await prisma.user_privileges.create({
             data: {
-              clerk_id: member.clerk_id,
+              google_id: member.clerk_id,
               privilege: 'berkomunitasplus',
               granted_at: new Date(),
               granted_by: 'auto-bc-connection',

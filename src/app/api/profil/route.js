@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import prisma from '../../../../lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // Helper function to parse social media links
 function parseSocialMediaLink(link) {
@@ -68,16 +68,20 @@ function parseSocialMediaLink(link) {
   return null;
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = user.id;    // Get member data with emails and privileges
-    const member = await prisma.members.findUnique({
-      where: { clerk_id: userId },
+    }    // Find member by email, google_id or clerk_id
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
+      },
       include: {
         member_emails: {
           orderBy: [
@@ -87,17 +91,11 @@ export async function GET() {
         },
         profil_sosial_media: true,
         loyalty_point_history: {
-          orderBy: {
-            created_at: 'desc'
-          }
+          orderBy: { created_at: 'desc' }
         },
         user_privileges: {
-          where: {
-            is_active: true
-          },
-          orderBy: {
-            granted_at: 'desc'
-          }
+          where: { is_active: true },
+          orderBy: { granted_at: 'desc' }
         }
       }
     });
@@ -165,12 +163,11 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = user.id;
     const body = await request.json();
     const { action, link } = body;
 
@@ -196,8 +193,8 @@ export async function POST(request) {
               mode: 'insensitive'
             },
             members: {
-              clerk_id: {
-                not: userId
+              google_id: {
+                not: user.id
               }
             }
           },
@@ -229,36 +226,51 @@ export async function POST(request) {
       }
       // --- END: SOCIAL MEDIA DUPLICATE CHECK ---
 
-      // Ensure member exists (upsert approach)
-      const member = await prisma.members.upsert({
-        where: { clerk_id: userId },
-        update: {}, // No update needed, just ensure it exists
-        create: {
-          clerk_id: userId,
-          nama_lengkap: 'User', // Default name, will be updated later
-          tanggal_daftar: new Date(),
-          loyalty_point: 0
+      // Ensure member exists: find by email/google_id/clerk_id or create
+      let member = await prisma.members.findFirst({      where: {
+          OR: [
+            { email: user.email },
+            { google_id: user.google_id },
+            user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+          ].filter(Boolean)
         }
       });
+
+      if (!member) {
+        member = await prisma.members.create({
+          data: { google_id: user.clerk_id || null,
+            email: user.email || null,
+            google_id: user.google_id || null,
+            nama_lengkap: user.nama_lengkap || user.name || 'User',
+            tanggal_daftar: new Date(),
+            loyalty_point: 0
+          }
+        });
+      }
 
       console.log('Member ensured for social media:', member.id);
 
       // Ensure user privilege exists
       const existingPrivilege = await prisma.user_privileges.findFirst({
-        where: { clerk_id: userId }
+        where: {
+          OR: [
+            user.clerk_id ? { google_id: user.clerk_id } : {},
+            { email: user.email }
+          ].filter(obj => Object.keys(obj).length > 0)
+        }
       });
 
       if (!existingPrivilege) {
         await prisma.user_privileges.create({
-          data: {
-            clerk_id: userId,
+          data: { google_id: user.clerk_id || null,
+            email: user.email,
             privilege: 'user',
             is_active: true,
             granted_at: new Date(),
             granted_by: 'system'
           }
         });
-        console.log('User privilege created for:', userId);
+        console.log('User privilege created for:', user.email);
       }
 
       const newSocialProfile = await prisma.profil_sosial_media.create({
@@ -285,12 +297,11 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = user.id;
     const body = await request.json();
     const { nama_lengkap, nomer_wa, bio, status_kustom } = body;
 
@@ -317,8 +328,8 @@ export async function PUT(request) {
       const existingByWA = await prisma.members.findFirst({
         where: {
           nomer_wa: nomer_wa,
-          clerk_id: {
-            not: userId
+          google_id: {
+            not: user.id
           }
         },
         include: {
@@ -343,36 +354,52 @@ export async function PUT(request) {
         }, { status: 409 }); // 409 Conflict
       }
     }
-    // --- END: DUPLICATE CHECK ---
-
-    // Upsert member data (create if not exists, update if exists)
-    const updatedMember = await prisma.members.upsert({
-      where: { clerk_id: userId },
-      update: {
-        nama_lengkap: nama_lengkap,
-        nomer_wa: nomer_wa,
-        bio: bio || null,
-        status_kustom: status_kustom || null
-      },
-      create: {
-        clerk_id: userId,
-        nama_lengkap: nama_lengkap,
-        nomer_wa: nomer_wa,
-        bio: bio || null,
-        status_kustom: status_kustom || null,
-        tanggal_daftar: new Date(),
-        loyalty_point: 0
+    // --- END: DUPLICATE CHECK ---    // Find member by email/google_id/clerk_id, update or create
+    let member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
       }
     });
 
-    console.log('Member upserted successfully:', updatedMember);    // Auto-sync display_name in user_usernames table with nama_lengkap
+    let updatedMember;
+    if (member) {
+      updatedMember = await prisma.members.update({
+        where: { id: member.id },
+        data: {
+          nama_lengkap,
+          nomer_wa,
+          bio: bio || null,
+          status_kustom: status_kustom || null
+        }
+      });
+    } else {
+      updatedMember = await prisma.members.create({
+        data: { google_id: user.clerk_id || null,
+          email: user.email || null,
+          google_id: user.google_id || null,
+          nama_lengkap,
+          nomer_wa,
+          bio: bio || null,
+          status_kustom: status_kustom || null,
+          tanggal_daftar: new Date(),
+          loyalty_point: 0
+        }
+      });
+    }
+
+    console.log('Member upserted successfully:', updatedMember);
+
+    // Auto-sync display_name in user_usernames table with nama_lengkap
     try {
-      await prisma.user_usernames.updateMany({
-        where: { member_id: updatedMember.id },
+      await prisma.user_usernames.updateMany({        where: { member_id: updatedMember.id },
         data: { display_name: updatedMember.nama_lengkap }
       });
       console.log('Display name synced with nama_lengkap for member:', updatedMember.id);
-    } catch (syncError) {
+    } catch {
       console.log('No username record to sync for member:', updatedMember.id);
     }
 
@@ -446,17 +473,28 @@ export async function PUT(request) {
 // PATCH method for updating bio and status_kustom only
 export async function PATCH(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }    const { bio, status_kustom } = await request.json();
+
+    // Find member by email/google_id/clerk_id
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
+      }
+    });
+
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
 
-    const userId = user.id;
-    const { bio, status_kustom } = await request.json();
-
-    // Update only bio and status_kustom
     const updatedMember = await prisma.members.update({
-      where: { clerk_id: userId },
+      where: { id: member.id },
       data: {
         bio: bio || null,
         status_kustom: status_kustom || null

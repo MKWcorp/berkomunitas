@@ -1,23 +1,23 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import AdminLayout from './components/AdminLayout';
 import DashboardTab from './tabs/DashboardTab';
 import CrudTab from './tabs/CrudTab';
 
 export default function AdminPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [isAdmin, setIsAdmin] = useState(null);
   const [tab, setTab] = useState('dashboard');
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       setIsAdmin(false);
       return;
     }
     fetch('/api/admin/privileges', {
-      headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+      headers: { 'x-user-email': user.email }
     })
     .then(res => res.json())
     .then(data => setIsAdmin(data.isAdmin))

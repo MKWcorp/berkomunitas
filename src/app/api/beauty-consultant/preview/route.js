@@ -1,8 +1,5 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 // POST /api/beauty-consultant/preview - Preview BC data untuk konfirmasi
 export async function POST(request) {
   try {

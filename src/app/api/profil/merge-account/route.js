@@ -1,12 +1,9 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 export async function POST(request) {
   try {
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -32,7 +29,7 @@ export async function POST(request) {
 
     // Find target member
     const targetMember = await prisma.members.findUnique({
-      where: { clerk_id: target_clerk_id },
+      where: { google_id: target_clerk_id },
       include: {
         member_emails: true,
         profil_sosial_media: true,
@@ -48,7 +45,7 @@ export async function POST(request) {
 
     // Find current user's member record (if exists)
     const currentMember = await prisma.members.findUnique({
-      where: { clerk_id: currentUserId },
+      where: { google_id: currentUserId },
       include: {
         member_emails: true,
         profil_sosial_media: true,
@@ -68,16 +65,14 @@ export async function POST(request) {
         for (const email of userEmails) {
           // Check if email already exists
           const existingEmail = await tx.member_emails.findFirst({
-            where: {
-              clerk_id: target_clerk_id,
+            where: { google_id: target_clerk_id,
               email: email.emailAddress
             }
           });
 
           if (!existingEmail) {
             await tx.member_emails.create({
-              data: {
-                clerk_id: target_clerk_id,
+              data: { google_id: target_clerk_id,
                 email: email.emailAddress,
                 verified: email.verification?.status === 'verified',
                 is_primary: email.emailAddress === primaryClerkEmail
@@ -90,7 +85,7 @@ export async function POST(request) {
         if (currentMember) {
           // Delete current user's records
           await tx.member_emails.deleteMany({
-            where: { clerk_id: currentUserId }
+            where: { google_id: currentUserId }
           });
           
           await tx.profil_sosial_media.deleteMany({
@@ -98,7 +93,7 @@ export async function POST(request) {
           });
 
           await tx.members.delete({
-            where: { clerk_id: currentUserId }
+            where: { google_id: currentUserId }
           });
         }
 
@@ -115,7 +110,7 @@ export async function POST(request) {
           const totalPoints = currentPoints + targetPoints;
 
           await tx.members.update({
-            where: { clerk_id: target_clerk_id },
+            where: { google_id: target_clerk_id },
             data: {
               loyalty_point: totalPoints
             }
@@ -156,16 +151,14 @@ export async function POST(request) {
 
           for (const email of userEmails) {
             const existingEmail = await tx.member_emails.findFirst({
-              where: {
-                clerk_id: target_clerk_id,
+              where: { google_id: target_clerk_id,
                 email: email.emailAddress
               }
             });
 
             if (!existingEmail) {
               await tx.member_emails.create({
-                data: {
-                  clerk_id: target_clerk_id,
+                data: { google_id: target_clerk_id,
                   email: email.emailAddress,
                   verified: email.verification?.status === 'verified',
                   is_primary: email.emailAddress === primaryClerkEmail
@@ -176,11 +169,11 @@ export async function POST(request) {
 
           // Delete current user's member record
           await tx.member_emails.deleteMany({
-            where: { clerk_id: currentUserId }
+            where: { google_id: currentUserId }
           });
 
           await tx.members.delete({
-            where: { clerk_id: currentUserId }
+            where: { google_id: currentUserId }
           });
         }
 

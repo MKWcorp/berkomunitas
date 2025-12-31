@@ -1,8 +1,5 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 export async function GET() {
   try {
     // Fetch semua user dengan total loyalty dan comment count
@@ -11,7 +8,7 @@ export async function GET() {
         id: true,
         nama_lengkap: true,
         tanggal_daftar: true,
-        clerk_id: true,
+        google_id: true,
         foto_profil_url: true,
         loyalty_point: true, // Use field langsung dari members table
         // Get username dan display_name dari user_usernames
@@ -58,7 +55,7 @@ export async function GET() {
         total_loyalty: totalLoyalty,
         total_comments: totalComments,
         member_since: member.tanggal_daftar,
-        clerk_id: member.clerk_id,
+        google_id: member.clerk_id,
         foto_profil_url: member.foto_profil_url
       };
     });

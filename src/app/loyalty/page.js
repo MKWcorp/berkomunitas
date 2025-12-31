@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSSOUser } from "@/hooks/useSSOUser";
 import { 
-  CurrencyDollarIcon, 
+  CurrencyDollarIcon,
   ClockIcon,
   TrophyIcon,
   ExclamationTriangleIcon,
@@ -13,7 +13,7 @@ import GlassCard from '../components/GlassCard';
 export default function LoyaltyPage() {
   const [loyaltyHistory, setLoyaltyHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
 
   useEffect(() => {
     const loadProfileData = async () => {

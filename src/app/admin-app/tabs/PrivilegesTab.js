@@ -1,17 +1,17 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { PencilIcon, TrashIcon, PlusIcon, UserIcon } from '@heroicons/react/24/outline';
 import AdminModal from '../components/AdminModal';
 
 export default function PrivilegesTab() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
-    clerk_id: '',
+    google_id: '',
     privilege: 'user',
     is_active: true
   });
@@ -32,7 +32,7 @@ export default function PrivilegesTab() {
   const fetchItems = async () => {
     try {
       const response = await fetch('/api/admin/privileges', {
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
       if (response.ok) {
         const data = await response.json();
@@ -58,10 +58,10 @@ export default function PrivilegesTab() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({
-          clerk_id: formData.clerk_id,
+          google_id: formData.clerk_id,
           privilege: formData.privilege,
           is_active: formData.is_active
         })
@@ -86,7 +86,7 @@ export default function PrivilegesTab() {
     try {
       const response = await fetch(`/api/admin/privileges/${id}`, {
         method: 'DELETE',
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
 
       if (response.ok) {
@@ -106,7 +106,7 @@ export default function PrivilegesTab() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({ is_active: !currentStatus })
       });
@@ -126,13 +126,13 @@ export default function PrivilegesTab() {
     setEditingItem(item);
     if (item) {
       setFormData({
-        clerk_id: item.clerk_id || '',
+        google_id: item.clerk_id || '',
         privilege: item.privilege || 'user',
         is_active: item.is_active !== false
       });
     } else {
       setFormData({
-        clerk_id: '',
+        google_id: '',
         privilege: 'user',
         is_active: true
       });
@@ -144,7 +144,7 @@ export default function PrivilegesTab() {
     setShowModal(false);
     setEditingItem(null);
     setFormData({
-      clerk_id: '',
+      google_id: '',
       privilege: 'user',
       is_active: true
     });
@@ -346,7 +346,7 @@ export default function PrivilegesTab() {
             <input
               type="text"
               value={formData.clerk_id}
-              onChange={(e) => setFormData({ ...formData, clerk_id: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, google_id: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
               placeholder="Masukkan Clerk ID user..."

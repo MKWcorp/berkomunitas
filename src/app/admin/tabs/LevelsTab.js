@@ -1,12 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import AdminModal from '../components/AdminModal';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 
 export default function LevelsTab() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -18,9 +18,8 @@ export default function LevelsTab() {
   });
   const [sortConfig, setSortConfig] = useState({ key: 'level_number', direction: 'asc' });
 
-
   useEffect(() => {
-    if (user && user.primaryEmailAddress?.emailAddress) {
+    if (user && user.email) {
       fetchItems();
     }
   }, [user]);
@@ -28,7 +27,7 @@ export default function LevelsTab() {
   const fetchItems = async () => {
     try {
       const response = await fetch('/api/admin/levels', {
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
       if (response.ok) {
         const data = await response.json();
@@ -54,7 +53,7 @@ export default function LevelsTab() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({
           level_number: parseInt(formData.level_number),
@@ -81,7 +80,7 @@ export default function LevelsTab() {
     try {
       const response = await fetch(`/api/admin/levels/${id}`, {
         method: 'DELETE',
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
 
       if (response.ok) {

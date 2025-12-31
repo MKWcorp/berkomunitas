@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { EnvelopeIcon, LinkIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export default function EmailSocialManager() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [emailForm, setEmailForm] = useState({ email: '', isAddingEmail: false });
   const [socialForm, setSocialForm] = useState({ isConnecting: false });
   const [loading, setLoading] = useState({ email: false, social: false });

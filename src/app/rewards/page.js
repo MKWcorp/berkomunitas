@@ -1,13 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from 'react-dom';
-import { useUser } from "@clerk/nextjs";
+import { useSSOUser } from '@/hooks/useSSOUser';
 import GlassCard from '../components/GlassCard';
 import { MagnifyingGlassIcon, FunnelIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { hasPrivilege } from '../../utils/privilegeChecker';
 
 export default function RewardsPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [memberData, setMemberData] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [categories, setCategories] = useState([]);

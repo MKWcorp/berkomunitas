@@ -1,8 +1,5 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 // GET /api/system/validation - Complete system validation
 export async function GET(request) {
   try {
@@ -94,7 +91,7 @@ export async function GET(request) {
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true,
+        google_id: true,
         user_privileges: {
           where: { 
             privilege: 'berkomunitasplus',

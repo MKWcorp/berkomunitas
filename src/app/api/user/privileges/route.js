@@ -1,8 +1,5 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 // GET /api/user/privileges - Check user privileges
 export async function GET(request) {
   try {
@@ -22,7 +19,7 @@ export async function GET(request) {
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true
+        google_id: true
       }
     });
 
@@ -35,8 +32,7 @@ export async function GET(request) {
 
     // Get user privileges
     const privileges = await prisma.user_privileges.findMany({
-      where: {
-        clerk_id: member.clerk_id,
+      where: { google_id: member.clerk_id,
         is_active: true
       },
       select: {
@@ -132,7 +128,7 @@ export async function POST(request) {
     // Get member's clerk_id
     const member = await prisma.members.findUnique({
       where: { id: parseInt(member_id) },
-      select: { clerk_id: true, nama_lengkap: true }
+      select: { google_id: true, nama_lengkap: true }
     });
 
     if (!member || !member.clerk_id) {
@@ -144,8 +140,7 @@ export async function POST(request) {
 
     // Check if privilege already exists
     const existingPrivilege = await prisma.user_privileges.findFirst({
-      where: {
-        clerk_id: member.clerk_id,
+      where: { google_id: member.clerk_id,
         privilege: privilege
       }
     });
@@ -170,7 +165,7 @@ export async function POST(request) {
       // Create new privilege
       const newPrivilege = await prisma.user_privileges.create({
         data: {
-          clerk_id: member.clerk_id,
+          google_id: member.clerk_id,
           privilege: privilege,
           granted_at: new Date(),
           granted_by: granted_by || 'manual-admin',

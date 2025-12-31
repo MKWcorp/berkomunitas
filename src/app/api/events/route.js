@@ -1,24 +1,37 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
-import { currentUser } from '@clerk/nextjs/server';
+import prisma from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
 
 // GET /api/events - Retrieve all events
 export async function GET(request) {
   try {
     console.log('GET /api/events - Starting...');
     
-    // Get current user from Clerk
-    const user = await currentUser();
-    console.log('GET /api/events - Clerk user:', user?.id);
+    // Get current user from SSO
+    const user = await getCurrentUser(request);
+    console.log('GET /api/events - SSO user:', user?.id);
     
-    if (!user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized - No user authenticated' }, { status: 401 });
     }
 
-    // Check if user has admin privileges using clerk_id
+    // Find member by email, google_id, or clerk_id
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
+      }
+    });    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+
+    // Check if user has admin privileges using member_id (new SSO-compatible way)
     const adminPrivilege = await prisma.user_privileges.findFirst({
       where: { 
-        clerk_id: user.id, 
+        member_id: member.id,
         privilege: 'admin', 
         is_active: true 
       }
@@ -31,7 +44,7 @@ export async function GET(request) {
       return NextResponse.json({ 
         error: 'Forbidden: Admin access required',
         debug: {
-          clerk_id: user.id,
+          member_id: member.id,
           has_admin_privilege: !!adminPrivilege
         }
       }, { status: 403 });
@@ -63,18 +76,31 @@ export async function POST(request) {
   try {
     console.log('POST /api/events - Starting request');
     
-    // Get current user from Clerk
-    const user = await currentUser();
-    console.log('POST /api/events - Clerk user:', user?.id);
+    // Get current user from SSO
+    const user = await getCurrentUser(request);
+    console.log('POST /api/events - SSO user:', user?.id);
     
-    if (!user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized - No user authenticated' }, { status: 401 });
     }
 
-    // Check if user has admin privileges using clerk_id
+    // Find member by email, google_id, or clerk_id
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
+      }
+    });    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+
+    // Check if user has admin privileges using member_id (new SSO-compatible way)
     const adminPrivilege = await prisma.user_privileges.findFirst({
       where: { 
-        clerk_id: user.id, 
+        member_id: member.id,
         privilege: 'admin', 
         is_active: true 
       }
@@ -87,7 +113,7 @@ export async function POST(request) {
       return NextResponse.json({ 
         error: 'Forbidden: Admin access required',
         debug: {
-          clerk_id: user.id,
+          member_id: member.id,
           has_admin_privilege: !!adminPrivilege
         }
       }, { status: 403 });

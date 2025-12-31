@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import AdminLayout from './components/AdminLayout';
 import { GlassCard } from '@/components/GlassLayout';
@@ -18,18 +18,18 @@ import GeneratePhotosTab from './tabs/GeneratePhotosTab';
 import SocialMediaTab from './tabs/SocialMediaTab';
 
 export default function AdminPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [isAdmin, setIsAdmin] = useState(null);
   const [tab, setTab] = useState('dashboard');
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       setIsAdmin(false);
       return;
     }
     fetch('/api/admin/privileges', {
-      headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+      headers: { 'x-user-email': user.email }
     })
     .then(res => res.json())
     .then(data => setIsAdmin(data.isAdmin))

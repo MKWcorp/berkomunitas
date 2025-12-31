@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '@/utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
-export async function GET(_request) {
+export async function GET(request) {
   try {
     console.log('🔍 Debug Admin API called...');
     
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     console.log('Clerk userId:', userId);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ 
         success: false, 
         _error: "Tidak terautentikasi",
@@ -19,7 +19,7 @@ export async function GET(_request) {
     
     // Check if member exists
     const member = await prisma.members.findUnique({ 
-      where: { clerk_id: userId },
+      where: { id: user.id },
       include: {
         member_emails: true
       }
@@ -28,7 +28,7 @@ export async function GET(_request) {
     console.log('Member found:', member ? {
       id: member._id,
       name: member.name,
-      clerk_id: member.clerk_id,
+      google_id: member.clerk_id,
       email: member.member_emails[0]?.email
     } : 'Not found');
     
@@ -42,9 +42,7 @@ export async function GET(_request) {
     
     // Check admin privileges
     const privileges = await prisma.user_privileges.findMany({
-      where: { 
-        clerk_id: userId
-      }
+      where: { id: user.id }
     });
     
     console.log('Privileges found:', privileges.map(p => ({
@@ -63,7 +61,7 @@ export async function GET(_request) {
         id: member.id,
         name: member.name,
         email: member.member_emails[0]?.email,
-        clerk_id: member.clerk_id
+        google_id: member.clerk_id
       },
       privileges: privileges.map(p => ({
         privilege: p.privilege,

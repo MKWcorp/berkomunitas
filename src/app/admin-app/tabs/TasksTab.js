@@ -1,13 +1,13 @@
  'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import { PencilIcon, TrashIcon, PlusIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon, ShareIcon } from '@heroicons/react/24/outline';
 import AdminModal from '../components/AdminModal';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 
 export default function TasksTab() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const router = useRouter();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +81,7 @@ export default function TasksTab() {
     setLoading(true);
     try {
       const response = await fetch(`/api/admin/tugas?page=${pageNum}&q=${encodeURIComponent(search)}`, {
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
       if (response.ok) {
         const result = await response.json();
@@ -123,7 +123,7 @@ export default function TasksTab() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({
           keyword_tugas: formData.keyword_tugas,
@@ -157,7 +157,7 @@ export default function TasksTab() {
       const url = forceDelete ? `/api/admin/tugas/${id}?force=true` : `/api/admin/tugas/${id}`;
       const response = await fetch(url, {
         method: 'DELETE',
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
 
       if (response.ok) {
@@ -192,7 +192,7 @@ export default function TasksTab() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({ status: newStatus })
       });

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
-import { auth } from '@clerk/nextjs/server';
-
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 /**
  * GET /api/task-submissions
  * Fetches task submission statuses for a specific member
@@ -10,8 +9,8 @@ import { auth } from '@clerk/nextjs/server';
  * - memberId: The ID of the member to get submissions for
  */
 export async function GET(request) {
-  const { userId } = await auth();
-  if (!userId) {
+  const user = await getCurrentUser(request);
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 

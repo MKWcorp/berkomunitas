@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
-import { currentUser } from '@clerk/nextjs/server';
+import prisma from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
 
 // PUT /api/events/[setting_name] - Update an existing event
 export async function PUT(request, { params }) {
   try {
     // Get current user from Clerk
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     console.log('PUT /api/events/[setting_name] - Clerk user:', user?.id);
     
     if (!user?.id) {
@@ -15,8 +15,7 @@ export async function PUT(request, { params }) {
 
     // Check if user has admin privileges using clerk_id
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: { 
-        clerk_id: user.id, 
+      where: { google_id: user.id, 
         privilege: 'admin', 
         is_active: true 
       }
@@ -29,7 +28,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ 
         error: 'Forbidden: Admin access required',
         debug: {
-          clerk_id: user.id,
+          google_id: user.id,
           has_admin_privilege: !!adminPrivilege
         }
       }, { status: 403 });
@@ -160,7 +159,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     // Get current user from Clerk
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     console.log('DELETE /api/events/[setting_name] - Clerk user:', user?.id);
     
     if (!user?.id) {
@@ -169,8 +168,7 @@ export async function DELETE(request, { params }) {
 
     // Check if user has admin privileges using clerk_id
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: { 
-        clerk_id: user.id, 
+      where: { google_id: user.id, 
         privilege: 'admin', 
         is_active: true 
       }
@@ -183,7 +181,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ 
         error: 'Forbidden: Admin access required',
         debug: {
-          clerk_id: user.id,
+          google_id: user.id,
           has_admin_privilege: !!adminPrivilege
         }
       }, { status: 403 });

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
-import { auth } from '@clerk/nextjs/server';
-
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 /**
  * POST /api/task-submissions/timeout
  * Handles task timeout - updates status to 'gagal_diverifikasi'
@@ -10,8 +9,8 @@ import { auth } from '@clerk/nextjs/server';
  * - taskId: The ID of the task that timed out
  */
 export async function POST(request) {
-  const { userId } = await auth();
-  if (!userId) {
+  const user = await getCurrentUser(request);
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -28,7 +27,7 @@ export async function POST(request) {
 
     // Verify that the authenticated user owns this submission
     const member = await prisma.members.findUnique({
-      where: { clerk_id: userId },
+      where: { id: user.id },
       select: { id: true },
     });
 

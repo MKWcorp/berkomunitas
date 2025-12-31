@@ -101,7 +101,7 @@ async function massGenerateUsernames() {
       select: {
         id: true,
         nama_lengkap: true,
-        clerk_id: true
+        google_id: true
       }
     });
 

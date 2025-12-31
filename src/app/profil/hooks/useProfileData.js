@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 
 export function useProfileData() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [loading, setLoading] = useState(true);
   const [member, setMember] = useState(null);
   const [socialProfiles, setSocialProfiles] = useState([]);

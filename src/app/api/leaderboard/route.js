@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import prisma from '../../../../lib/prisma.js';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,7 @@ const CACHE_DURATION = 30000; // 30 seconds cache
  * Fetches leaderboard data with user rankings
  * Maintains backward compatibility with existing frontend
  */
-export async function GET() {
+export async function GET(request) {
   try {
     let loyaltyRaw = [];
     let commentRaw = [];

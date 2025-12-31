@@ -17,8 +17,8 @@ async function testN8NWorkflow() {
     console.log('📋 Step 1: Getting test data from database...');
     
     const member = await prisma.members.findFirst({
-      where: { clerk_id: { not: null } },
-      select: { id: true, nama_lengkap: true, clerk_id: true }
+      where: { google_id: { not: null } },
+      select: { id: true, nama_lengkap: true, google_id: true }
     });
 
     const task = await prisma.tugas_ai.findFirst({

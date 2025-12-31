@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '../../../../utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // DRW Skincare API Configuration
 const DRW_API_URL = 'https://drwgroup.id/apis/reseller/get';
@@ -9,9 +9,9 @@ const DRW_BEARER_TOKEN = 'c5d46484b83e6d90d2c55bc7a0ec9782493a1fa2434b66ebed36c3
 // Admin-only endpoint untuk sync data Beauty Consultant dari DRW API
 export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized - Please log in' },
         { status: 401 }
@@ -24,7 +24,7 @@ export async function POST(request) {
     // TODO: Re-enable admin check for production
     // const userPrivilege = await prisma.user_privileges.findFirst({
     //   where: { 
-    //     clerk_id: userId,
+    //     id: user.id,
     //     is_active: true,
     //     privilege: 'admin'
     //   }

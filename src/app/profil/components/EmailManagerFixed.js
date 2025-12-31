@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   EnvelopeIcon, 
   PlusIcon, 
@@ -13,7 +13,7 @@ import {
 import { CheckCircleIcon as CheckCircleIconSolid } from '@heroicons/react/24/solid';
 
 export default function EmailManager() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [newEmail, setNewEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState({});

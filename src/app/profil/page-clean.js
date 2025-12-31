@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useSearchParams } from 'next/navigation';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
 
@@ -17,7 +17,7 @@ const TABS = [
 ];
 
 export default function ProfileDashboard() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const searchParams = useSearchParams();
   const isRequired = searchParams.get('required') === 'true';
   const fileInputRef = useRef(null);

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   ClockIcon,
   TruckIcon,
@@ -15,7 +15,7 @@ import AdminModal from '../../admin/components/AdminModal';
 import ShippingTracker from '../../../components/ShippingTracker';
 
 export default function RedemptionStatusPage() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [redemptions, setRedemptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,7 +50,7 @@ export default function RedemptionStatusPage() {
   }, [user]);
 
   const loadRedemptions = async () => {
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
     
     try {
       setLoading(true);

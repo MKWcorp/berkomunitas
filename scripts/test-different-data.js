@@ -13,7 +13,7 @@ async function testWithDifferentData() {
   try {
     // Get different test data
     const members = await prisma.members.findMany({
-      where: { clerk_id: { not: null } },
+      where: { google_id: { not: null } },
       select: { id: true, nama_lengkap: true },
       take: 3
     });

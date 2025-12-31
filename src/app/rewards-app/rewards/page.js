@@ -1,13 +1,13 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { PencilIcon, TrashIcon, PhotoIcon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import GlassCard from '../components/GlassCard';
 import AdminModal from '../../admin/components/AdminModal';
 import ScrollToTopButton from '../../admin/components/ScrollToTopButton';
 
 export default function RewardsManagementPage() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [rewards, setRewards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,7 +73,7 @@ export default function RewardsManagementPage() {
 
   const handleSaveCategory = async (e) => {
     e.preventDefault();
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
 
     try {
       setSaving(true);
@@ -81,7 +81,7 @@ export default function RewardsManagementPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user.primaryEmailAddress.emailAddress
+          'x-user-email': user.email
         },
         body: JSON.stringify(categoryForm)
       });
@@ -108,12 +108,12 @@ export default function RewardsManagementPage() {
   };
 
   const loadRewards = async () => {
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
     
     try {
       setLoading(true);
       const response = await fetch('/api/admin/rewards', {
-        headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+        headers: { 'x-user-email': user.email }
       });
       
       if (response.ok) {
@@ -167,7 +167,7 @@ export default function RewardsManagementPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
 
     // Validation: All fields are required
     if (!form.reward_name.trim()) {
@@ -200,7 +200,7 @@ export default function RewardsManagementPage() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user.primaryEmailAddress.emailAddress
+          'x-user-email': user.email
         },
         body: JSON.stringify(form)
       });
@@ -259,12 +259,12 @@ export default function RewardsManagementPage() {
 
   const handleDelete = async (id) => {
     if (!confirm('Yakin ingin menghapus hadiah ini?')) return;
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
 
     try {
       const response = await fetch(`/api/admin/rewards/${id}`, {
         method: 'DELETE',
-        headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+        headers: { 'x-user-email': user.email }
       });
 
       if (response.ok) {

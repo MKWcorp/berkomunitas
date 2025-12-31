@@ -1,13 +1,13 @@
  'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
 import { PencilIcon, TrashIcon, PlusIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon, ShareIcon } from '@heroicons/react/24/outline';
 import AdminModal from '../components/AdminModal';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 
 export default function TasksTab() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const router = useRouter();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,11 +81,10 @@ export default function TasksTab() {
     setLoading(true);
     try {
       const response = await fetch(`/api/admin/tugas?page=${pageNum}&q=${encodeURIComponent(search)}`, {
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
-      });
-      if (response.ok) {
+        headers: { 'x-user-email': user?.email }
+      });      if (response.ok) {
         const result = await response.json();
-        const newTasks = Array.isArray(result.tasks) ? result.tasks : [];
+        const newTasks = Array.isArray(result.tugas) ? result.tugas : [];
         setItems(prev => pageNum === 1 ? newTasks : [...prev, ...newTasks]);
         setHasMore(newTasks.length > 0);
       } else {
@@ -123,7 +122,7 @@ export default function TasksTab() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({
           keyword_tugas: formData.keyword_tugas,
@@ -157,7 +156,7 @@ export default function TasksTab() {
       const url = forceDelete ? `/api/admin/tugas/${id}?force=true` : `/api/admin/tugas/${id}`;
       const response = await fetch(url, {
         method: 'DELETE',
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
 
       if (response.ok) {
@@ -192,7 +191,7 @@ export default function TasksTab() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({ status: newStatus })
       });
@@ -402,13 +401,13 @@ export default function TasksTab() {
               </button>
             </div>
           </div>
-        )}
-        <table className="min-w-full divide-y divide-gray-200">
+        )}        <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('id')}>
                 ID {sortConfig.key === 'id' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
-              </th>              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('keyword_tugas')}>
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('keyword_tugas')}>
                 Tugas {sortConfig.key === 'keyword_tugas' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('link_postingan')}>
@@ -430,20 +429,20 @@ export default function TasksTab() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedItems.map((item, idx) => {
-              const isLast = idx === sortedItems.length - 1;
-              return (
+              const isLast = idx === sortedItems.length - 1;              return (
                 <tr
                   key={item.id}
                   className="hover:bg-gray-50"
                   ref={isLast ? lastTaskElementRef : undefined}
                 >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{item.id}</div>
-                </td>                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{item.keyword_tugas}</div>
-                  <div className="text-sm text-gray-500 truncate max-w-xs">{item.deskripsi_tugas}</div>
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{item.id}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{item.keyword_tugas}</div>
+                    <div className="text-sm text-gray-500 truncate max-w-xs">{item.deskripsi_tugas}</div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
                   {item.link_postingan ? (
                     <a 
                       href={item.link_postingan} 
@@ -454,17 +453,16 @@ export default function TasksTab() {
                     >
                       {formatUrl(item.link_postingan)}
                     </a>
-                  ) : (
-                    <span className="text-gray-400 text-sm">-</span>
+                  ) : (                    <span className="text-gray-400 text-sm">-</span>
                   )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{item.point_value} poin</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{formatTimestamp(item.post_timestamp)}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{item.point_value} poin</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{formatTimestamp(item.post_timestamp)}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                   <button
                     onClick={() => toggleActive(item.id, item.status)}
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -472,12 +470,11 @@ export default function TasksTab() {
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}
-                  >
-                    {getStatusLabel(item.status)}
+                  >                    {getStatusLabel(item.status)}
                   </button>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex gap-2">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex gap-2">
                     <button
                       onClick={() => router.push(`/admin/tugas/${item.id}`)}
                       className="text-blue-600 hover:text-blue-900"
@@ -503,12 +500,11 @@ export default function TasksTab() {
                       onClick={() => handleDelete(item.id)}
                       className="text-red-600 hover:text-red-900"
                       title="Hapus Tugas"
-                    >
-                      <TrashIcon className="h-5 w-5" />
+                    >                      <TrashIcon className="h-5 w-5" />
                     </button>
-                  </div>
-                </td>
-              </tr>
+                    </div>
+                  </td>
+                </tr>
               );
             })}
           </tbody>

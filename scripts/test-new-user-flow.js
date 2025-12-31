@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 // Test data for simulation
 const testUserData = {
-  clerk_id: 'test_user_' + Date.now(),
+  google_id: 'test_user_' + Date.now(),
   email: `testuser${Date.now()}@example.com`,
   nama_lengkap: 'Test User Baru',
   username: `test_user_${Date.now()}`,
@@ -37,7 +37,7 @@ async function simulateNewUserFlow() {
     
     // Check if member already exists
     const existingMember = await prisma.members.findUnique({
-      where: { clerk_id: testUserData.clerk_id }
+      where: { google_id: testUserData.clerk_id }
     });
 
     if (existingMember) {
@@ -46,8 +46,7 @@ async function simulateNewUserFlow() {
       console.log(`   - Loyalty Points: ${existingMember.loyalty_point}`);
     } else {      // Create new member (simulating /api/create-member)
       const newMember = await prisma.members.create({
-        data: {
-          clerk_id: testUserData.clerk_id,
+        data: { google_id: testUserData.clerk_id,
           nama_lengkap: testUserData.nama_lengkap,
           tanggal_daftar: new Date(),
           loyalty_point: 0
@@ -57,8 +56,7 @@ async function simulateNewUserFlow() {
       // Create email record in member_emails table
       if (testUserData.email) {
         await prisma.member_emails.create({
-          data: {
-            clerk_id: testUserData.clerk_id,
+          data: { google_id: testUserData.clerk_id,
             email: testUserData.email,
             is_primary: true,
             verified: true,
@@ -77,7 +75,7 @@ async function simulateNewUserFlow() {
     console.log('📝 Step 4: Testing profile completion status...');
     
     const member = await prisma.members.findUnique({
-      where: { clerk_id: testUserData.clerk_id },
+      where: { google_id: testUserData.clerk_id },
       include: {
         social_profiles: true
       }
@@ -238,7 +236,7 @@ async function simulateNewUserFlow() {
     // Clean up test data
     console.log('\n🧹 Cleaning up test data...');
     await prisma.members.delete({
-      where: { clerk_id: testUserData.clerk_id }
+      where: { google_id: testUserData.clerk_id }
     });
     console.log('✅ Test data cleaned up');
 

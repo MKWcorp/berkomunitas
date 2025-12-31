@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '../../../../../lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // Fallback local storage for development
 async function uploadToLocalStorage(file) {
@@ -218,15 +218,14 @@ async function uploadFile(file) {
       throw new Error('All upload methods failed. Local: ' + localError.message);
     }
   }
-
   // No upload method available
   throw new Error('No upload service configured. Please set VPS_UPLOAD_URL or CLOUDINARY_CLOUD_NAME');
 }
 
 export async function POST(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -244,11 +243,14 @@ export async function POST(request) {
     const uploadMethod = process.env.VPS_UPLOAD_URL ? 'VPS' : 
                         process.env.CLOUDINARY_CLOUD_NAME ? 'Cloudinary' : 
                         'Local';
-
+    
     // Update the user's profile in the database
     const updatedMember = await prisma.members.updateMany({
       where: {
-        clerk_id: userId,
+        OR: [
+          { email: user.email },
+          { google_id: user.id }
+        ]
       },
       data: {
         foto_profil_url,

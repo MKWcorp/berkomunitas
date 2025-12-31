@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../../lib/requireAdmin";
-import prisma from "../../../../../lib/prisma";
+import prisma from '@/lib/prisma';
 
 export async function GET(request) {
   try {
@@ -21,7 +21,7 @@ export async function GET(request) {
           select: {
             id: true,
             nama_lengkap: true,
-            clerk_id: true,
+            google_id: true,
             nomer_wa: true
           }
         },

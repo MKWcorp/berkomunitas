@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import Image from 'next/image';
 import GlassCard from '../../components/GlassCard';
 import { 
@@ -15,7 +15,7 @@ import {
 
 export default function PublicProfilePage() {
   const { username } = useParams();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -402,11 +402,9 @@ export default function PublicProfilePage() {
             <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3 sm:mb-4 flex items-center gap-2">
               <TrophyIcon className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500" />
               Koleksi Badge ({profileData.badges.length})
-            </h2>
-            
-            {profileData.badges.length > 0 ? (
+            </h2>              {profileData.badges.length > 0 ? (
               <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
-                {profileData.badges.map((badge) => {
+                {profileData.badges.map((badge, index) => {
                   // Generate Shields.io URL with customization
                   const badgeColor = badge.badge_color || 'blue';
                   const badgeStyle = badge.badge_style || 'flat';
@@ -416,7 +414,7 @@ export default function PublicProfilePage() {
                   
                   return (
                     <div 
-                      key={badge.id}
+                      key={badge.id ? `badge-${badge.id}` : `badge-${index}`}
                       className="relative group"
                       title={`${badge.badge_name}\n${badge.description}\nDiperoleh ${formatDate(badge.earned_at)}`}
                     >

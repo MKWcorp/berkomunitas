@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   EyeIcon, 
   EyeSlashIcon, 
@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function SetPasswordForm() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',

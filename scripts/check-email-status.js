@@ -10,21 +10,19 @@ async function checkEmailStatus() {
   try {
     // Get total member count
     const totalMembers = await prisma.members.count({
-      where: { clerk_id: { not: null } }
+      where: { google_id: { not: null } }
     });
 
     // Get members with emails
     const membersWithEmails = await prisma.members.count({
-      where: {
-        clerk_id: { not: null },
+      where: { google_id: { not: null },
         member_emails: { some: {} }
       }
     });
 
     // Get members without emails
     const membersWithoutEmails = await prisma.members.count({
-      where: {
-        clerk_id: { not: null },
+      where: { google_id: { not: null },
         member_emails: { none: {} }
       }
     });
@@ -39,13 +37,12 @@ async function checkEmailStatus() {
     if (membersWithoutEmails > 0) {
       console.log('⚠️  Members without email records:');
       const missingEmailMembers = await prisma.members.findMany({
-        where: {
-          clerk_id: { not: null },
+        where: { google_id: { not: null },
           member_emails: { none: {} }
         },
         select: {
           id: true,
-          clerk_id: true,
+          google_id: true,
           nama_lengkap: true,
           tanggal_daftar: true
         },
@@ -73,7 +70,7 @@ async function checkEmailStatus() {
 
     for (const emailCount of emailCounts) {
       const member = await prisma.members.findUnique({
-        where: { clerk_id: emailCount.clerk_id },
+        where: { google_id: emailCount.clerk_id },
         select: { nama_lengkap: true }
       });
       
@@ -83,7 +80,7 @@ async function checkEmailStatus() {
     // Show recent registrations
     console.log('\n🕒 Recent registrations (last 10):');
     const recentMembers = await prisma.members.findMany({
-      where: { clerk_id: { not: null } },
+      where: { google_id: { not: null } },
       include: {
         member_emails: { select: { email: true, is_primary: true } }
       },

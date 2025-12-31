@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useUser, useClerk, UserProfile } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
+import { logout } from '@/lib/sso';
 import { 
   UserCircleIcon, 
   BookOpenIcon, 
@@ -16,10 +17,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function UserProfileDropdown() {
-  const { user, isSignedIn } = useUser();
-  const { signOut } = useClerk();
+  const { user, isSignedIn } = useSSOUser();
   const [isOpen, setIsOpen] = useState(false);
-  const [showClerkUI, setShowClerkUI] = useState(false);
   // Fetch foto_profil_url from dashboard
   const [fotoProfilUrl, setFotoProfilUrl] = useState(null);
   // Fetch user privileges
@@ -58,33 +57,22 @@ export default function UserProfileDropdown() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, []);  // ...hapus fetchProfileData
 
-  // ...hapus fetchProfileData
-
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await logout();
     setIsOpen(false);
-  };
-
-  const handleOpenSettings = () => {
-    setShowClerkUI(true);
-    setIsOpen(false);
-  };
-
-  const handleCloseSettings = () => {
-    setShowClerkUI(false);
+    window.location.href = '/';
   };
 
   const getProfileImage = () => {
-    // Priority: fotoProfilUrl (from DB) -> Clerk imageUrl -> Default avatar
+    // Priority: fotoProfilUrl (from DB) -> Default avatar
     if (fotoProfilUrl) return fotoProfilUrl;
-    if (user?.imageUrl) return user.imageUrl;
     return '/logo-b.png';
   };
 
   const getDisplayName = () => {
-    return user?.fullName || user?.firstName || 'User';
+    return user?.username || user?.email?.split('@')[0] || 'User';
   };
 
   // Get user's highest privilege
@@ -155,11 +143,10 @@ export default function UserProfileDropdown() {
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">
-                  {getDisplayName()}
+                <p className="text-sm font-semibold text-gray-900 truncate">                  {getDisplayName()}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
-                  {user?.primaryEmailAddress?.emailAddress}
+                  {user?.email}
                 </p>
               </div>
             </div>
@@ -182,11 +169,13 @@ export default function UserProfileDropdown() {
               className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-white/40 rounded-xl transition-colors"
             >
               <StarIcon className="w-5 h-5 mr-3 text-yellow-500" />
-              BerkomunitasPlus
-            </Link>
+              BerkomunitasPlus            </Link>
 
             <button
-              onClick={handleOpenSettings}
+              onClick={() => {
+                setIsOpen(false);
+                window.location.href = '/profil';
+              }}
               className="flex items-center w-full px-4 py-2 text-sm text-gray-800 hover:bg-white/40 rounded-xl transition-colors"
             >
               <CogIcon className="w-5 h-5 mr-3 text-orange-500" />
@@ -225,49 +214,11 @@ export default function UserProfileDropdown() {
               className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-100/40 rounded-xl transition-colors"
             >
               <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3 text-red-500" />
-              Sign Out
-            </button>
+              Sign Out            </button>
           </div>
         </div>
       )}
       </div>
-
-      {/* Clerk Settings Modal */}
-      {showClerkUI && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden relative mx-auto my-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <CogIcon className="w-5 h-5 text-orange-500" />
-                Pengaturan Akun
-              </h3>
-              <button
-                onClick={handleCloseSettings}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-            
-            {/* Clerk UserProfile Component */}
-            <div className="overflow-auto max-h-[calc(85vh-80px)] p-2">
-              <UserProfile 
-                routing="hash"
-                appearance={{
-                  elements: {
-                    rootBox: "w-full",
-                    card: "shadow-none border-0 w-full",
-                    header: "hidden",
-                    navbar: "border-r border-gray-200",
-                    pageScrollBox: "p-4",
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

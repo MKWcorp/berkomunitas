@@ -1,25 +1,17 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { getCurrentUser } from '@/lib/ssoAuth';
 // GET: Retrieve verified data for current user
-export async function GET() {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Find member by Clerk user ID
-    const member = await prisma.users.findFirst({
-      where: { clerk_user_id: userId }
+    // Find member by google_id
+    const member = await prisma.members.findFirst({
+      where: { google_id: user.id }
     });
 
     if (!member) {
@@ -79,14 +71,9 @@ export async function GET() {
 // POST: Create or update verified data
 export async function POST(request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await currentUser();
+    const user = await getCurrentUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -100,9 +87,9 @@ export async function POST(request) {
       youtube_username
     } = body;
 
-    // Find member by Clerk user ID
-    const member = await prisma.users.findFirst({
-      where: { clerk_user_id: userId }
+    // Find member by google_id
+    const member = await prisma.members.findFirst({
+      where: { google_id: user.id }
     });
 
     if (!member) {

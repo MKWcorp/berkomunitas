@@ -1,14 +1,11 @@
+import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-export async function GET() {
+import { getCurrentUser } from '@/lib/ssoAuth';
+export async function GET(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -17,9 +14,7 @@ export async function GET() {
 
     // Find the member by clerk_id
     const member = await prisma.members.findFirst({
-      where: {
-        clerk_id: userId
-      },
+      where: { id: user.id },
       select: {
         id: true,
         coin: true

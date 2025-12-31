@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   CalendarIcon, 
   GiftIcon, 
@@ -41,7 +41,7 @@ const STATUS_LABELS = {
 };
 
 export default function RewardsHistoryTab() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [rewardsHistory, setRewardsHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -219,15 +219,14 @@ export default function RewardsHistoryTab() {
             <GiftIcon className="h-4 w-4 mr-2" />
             Lihat Rewards
           </a>
-        </div>
-      ) : (
+        </div>      ) : (
         <div className="space-y-4">
-          {rewardsHistory.map((redemption) => {
+          {rewardsHistory.map((redemption, index) => {
             const StatusIcon = STATUS_ICONS[redemption.status] || ClockIcon;
             
             return (
               <div
-                key={redemption.id}
+                key={redemption.id ? `redemption-${redemption.id}` : `redemption-${index}`}
                 className="bg-white/50 border border-white/40 rounded-xl p-4 hover:shadow-md transition-all duration-200"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">

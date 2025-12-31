@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from './useSSOUser';
 
 export function useAdminStatus() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [isAdmin, setIsAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoaded) return;
     
-    if (!user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.email) {
       setIsAdmin(false);
       setLoading(false);
       return;
     }
 
     fetch('/api/admin/privileges', {
-      headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+      headers: { 'x-user-email': user.email }
     })
     .then(res => res.json())
     .then(data => {

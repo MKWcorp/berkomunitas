@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   GiftIcon, 
   UsersIcon,
@@ -15,7 +15,7 @@ import {
 import GlassCard from '../components/GlassCard';
 
 export default function RewardsDashboard() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [stats, setStats] = useState({
     totalRewards: 0,
     totalRedemptions: 0,
@@ -42,14 +42,14 @@ export default function RewardsDashboard() {
   }, [user]);
 
   const loadDashboardStats = async () => {
-    if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (!user?.email) return;
     
     try {
       setLoading(true);
       
       // Load rewards
       const rewardsResponse = await fetch('/api/admin/rewards', {
-        headers: { 'x-user-email': user.primaryEmailAddress.emailAddress }
+        headers: { 'x-user-email': user.email }
       });
       
       // Load redemptions  

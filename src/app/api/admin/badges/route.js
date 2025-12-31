@@ -1,14 +1,26 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../../lib/prisma';
+import prisma from '@/lib/prisma';
 import { requireAdmin } from '../../../../../lib/requireAdmin';
 
 export async function GET(request) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   const data = await prisma.badges.findMany();
   return NextResponse.json({ badges: data });
 }
 export async function POST(request) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   const body = await request.json();
   
   // Ensure required fields have default values

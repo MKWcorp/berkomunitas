@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from './useSSOUser';
 
 export function useProfileCompletion() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [profileStatus, setProfileStatus] = useState({
     isComplete: null,
     loading: true,
@@ -23,11 +23,9 @@ export function useProfileCompletion() {
         message: 'Please sign in'
       }));
       return;
-    }
-
-    const checkCompletion = async () => {
+    }    const checkCompletion = async () => {
       try {
-        const response = await fetch('/api/profile/check-completion', {
+        const response = await fetch('/api/profil/check-completeness', {
           credentials: 'include'
         });
         
@@ -59,13 +57,12 @@ export function useProfileCompletion() {
 
     checkCompletion();
   }, [isLoaded, user]);
-
   const refresh = async () => {
     setProfileStatus(prev => ({ ...prev, loading: true }));
     // Trigger re-check by updating the effect dependency
     if (isLoaded && user) {
       try {
-        const response = await fetch('/api/profile/check-completion', {
+        const response = await fetch('/api/profil/check-completeness', {
           credentials: 'include'
         });
         const data = await response.json();

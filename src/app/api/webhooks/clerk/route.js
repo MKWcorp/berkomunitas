@@ -1,9 +1,6 @@
+import prisma from '@/lib/prisma';
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
 export async function POST(req) {
   // Get webhook secret from environment
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
@@ -61,14 +58,13 @@ export async function POST(req) {
       await prisma.$transaction(async (tx) => {
         // Upsert member record: create if not exists, do nothing if it does
         const member = await tx.members.upsert({
-          where: { clerk_id: id },
+          where: { google_id: id },
           update: {
             // You can update fields here if the user might already exist 
             // but needs an update on creation event. For now, we leave it empty.
             nama_lengkap: nama_lengkap,
           },
-          create: {
-            clerk_id: id,
+          create: { google_id: id,
             nama_lengkap: nama_lengkap,
             tanggal_daftar: new Date(),
             // Set initial loyalty points or other defaults here
@@ -82,7 +78,7 @@ export async function POST(req) {
           
           // Get existing emails to avoid re-creating them
           const existingEmails = await tx.member_emails.findMany({
-            where: { clerk_id: id },
+            where: { google_id: id },
             select: { email: true }
           });
           const existingEmailSet = new Set(existingEmails.map(e => e.email));
@@ -90,7 +86,7 @@ export async function POST(req) {
           const emailData = email_addresses
             .filter(emailObj => !existingEmailSet.has(emailObj.email_address))
             .map((emailObj) => ({
-              clerk_id: id,
+              google_id: id,
               email: emailObj.email_address,
               is_primary: emailObj.id === primaryEmailInfo.id,
               verified: emailObj.verification?.status === 'verified' || false,
@@ -104,13 +100,12 @@ export async function POST(req) {
 
         // Auto-assign default user privilege if not already assigned
         const existingPrivilege = await tx.user_privileges.findFirst({
-          where: { clerk_id: id }
+          where: { google_id: id }
         });
 
         if (!existingPrivilege) {
           await tx.user_privileges.create({
-            data: {
-              clerk_id: id,
+            data: { google_id: id,
               privilege: 'user',
               is_active: true,
               granted_at: new Date(),
@@ -146,7 +141,7 @@ export async function POST(req) {
       await prisma.$transaction(async (tx) => {
         // Update member record
         await tx.members.update({
-          where: { clerk_id: id },
+          where: { google_id: id },
           data: {
             nama_lengkap: nama_lengkap,
           },
@@ -155,7 +150,7 @@ export async function POST(req) {
         if (email_addresses && email_addresses.length > 0) {
           // Get current emails from database
           const currentEmails = await tx.member_emails.findMany({
-            where: { clerk_id: id },
+            where: { google_id: id },
           });
 
           const currentEmailAddresses = currentEmails.map(e => e.email);
@@ -177,7 +172,7 @@ export async function POST(req) {
             const primaryEmail = email_addresses.find(e => e.verification?.status === 'verified') || email_addresses[0];
             
             const emailData = emailsToAdd.map((emailObj) => ({
-              clerk_id: id,
+              google_id: id,
               email: emailObj.email_address,
               is_primary: emailObj.id === primaryEmail.id,
               verified: emailObj.verification?.status === 'verified' || false,
@@ -192,8 +187,7 @@ export async function POST(req) {
           // Remove deleted emails
           if (emailsToRemove.length > 0) {
             await tx.member_emails.deleteMany({
-              where: {
-                clerk_id: id,
+              where: { google_id: id,
                 email: {
                   in: emailsToRemove.map(e => e.email)
                 }
@@ -228,8 +222,7 @@ export async function POST(req) {
       if (id) {
         // Delete member (CASCADE will automatically delete member_emails and user_privileges)
         await prisma.members.delete({
-          where: {
-            clerk_id: id,
+          where: { google_id: id,
           },
         });
         console.log(`🗑️ User deleted: ${id}`);

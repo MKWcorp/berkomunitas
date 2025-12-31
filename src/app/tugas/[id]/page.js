@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useParams, useRouter } from 'next/navigation';
 import Confetti from 'react-confetti';
 import { ArrowLeftIcon, ShareIcon, PlayCircleIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon, TrophyIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -33,7 +33,7 @@ function _getSourceBgColor(source) {
 }
 
 export default function TaskDetailPage() {
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { user, isLoaded, isSignedIn } = useSSOUser();
   const { id } = useParams();
   const router = useRouter();
   // Profile completion check
@@ -104,15 +104,14 @@ export default function TaskDetailPage() {
   // Get member ID from user metadata
   const getMemberIdFromUser = useCallback(async () => {
     if (!user) return null;
-    
-    try {
+      try {
       const response = await fetch('/api/create-member', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clerk_user_id: user.id,
-          email: user.emailAddresses[0]?.emailAddress,
-          display_name: user.fullName || user.username || 'Unknown'
+          google_id: user.id,
+          email: user.email,
+          display_name: user.name || user.email?.split('@')[0] || 'Unknown'
         }),
         credentials: 'include'
       });

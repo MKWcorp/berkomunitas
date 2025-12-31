@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import RankingCanvas from '@/components/ranking/RankingCanvas';
 import UserDetailModal from '@/components/ranking/UserDetailModal';
 import { RANKING_LEVELS, findUserLevel, getNextLevel, calculateLoyaltyNeeded } from '@/lib/rankingLevels';
 
 export default function RankingPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -158,7 +158,7 @@ export default function RankingPage() {
       console.log('=== Searching for user element ===');
       console.log('Current user data:', {
         id: currentUser.id,
-        clerk_id: currentUser.clerk_id,
+        google_id: currentUser.clerk_id,
         username: currentUser.username
       });
       
@@ -173,7 +173,7 @@ export default function RankingPage() {
       if (!userElement) {
         console.log('Searching for:', `[data-user-id="${currentUser.clerk_id}"]`);
         userElement = document.querySelector(`[data-user-id="${currentUser.clerk_id}"]`);
-        console.log('Found by clerk_id:', userElement);
+        console.log('Found by google_id:', userElement);
       }
       
       if (!userElement) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { 
   TrashIcon,
   ExclamationTriangleIcon,
@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function DeleteAccountSection() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   const [showModal, setShowModal] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -167,10 +167,9 @@ export default function DeleteAccountSection() {
                     <h4 className="font-medium text-red-900 mb-2">Peringatan Terakhir!</h4>
                     <p className="text-sm text-red-800">
                       Anda akan <strong>menghapus permanen</strong> akun untuk:
-                    </p>
-                    <div className="mt-2 p-2 bg-red-100 rounded border">
+                    </p>                    <div className="mt-2 p-2 bg-red-100 rounded border">
                       <p className="font-mono text-sm text-red-900">
-                        {user?.emailAddresses?.[0]?.emailAddress || user?.primaryEmailAddress?.emailAddress || 'Email tidak tersedia'}
+                        {user?.email || 'Email tidak tersedia'}
                       </p>
                     </div>
                   </div>

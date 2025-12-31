@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/utils/prisma';
+import prisma from '@/lib/prisma';
 import { requireAdmin } from '../../../../../../lib/requireAdmin';
 
 export async function PUT(request, { params }) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   
   const { id } = await params;
   const body = await request.json();
@@ -30,7 +36,13 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   const { id } = await params;
   await prisma.rewards.delete({ where: { id: Number(id) } });
   return NextResponse.json({ success: true });

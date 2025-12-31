@@ -1,22 +1,26 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '../../../../../lib/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/profil/check-completeness
  * Check if the current user's profile is complete
  */
-export async function GET() {
+export async function GET(request) {
   try {
-    const { userId } = await auth();
+    const user = await getCurrentUser(request);
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Find member and social media profiles
-    const member = await prisma.members.findUnique({
-      where: { clerk_id: userId },
+    }    // Find member by email, google_id, or clerk_id
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          { email: user.email },
+          { google_id: user.google_id },
+          user.clerk_id ? { google_id: user.clerk_id } : { id: user.id }
+        ].filter(Boolean)
+      },
       include: {
         profil_sosial_media: true
       }
@@ -64,17 +68,24 @@ export async function GET() {
  */
 export async function POST(request) {
   try {
-    const { clerk_id } = await request.json();
+    const body = await request.json();
+    const { clerk_id, email, google_id } = body;
     
-    if (!clerk_id) {
+    if (!clerk_id && !email && !google_id) {
       return NextResponse.json(
-        { error: 'clerk_id is required', isComplete: false },
+        { error: 'clerk_id, email, or google_id is required', isComplete: false },
         { status: 400 }
       );
     }
 
-    const member = await prisma.members.findUnique({
-      where: { clerk_id },
+    const member = await prisma.members.findFirst({
+      where: {
+        OR: [
+          clerk_id ? { clerk_id } : {},
+          email ? { email } : {},
+          google_id ? { google_id } : {}
+        ].filter(obj => Object.keys(obj).length > 0)
+      },
       include: {
         profil_sosial_media: true
       }

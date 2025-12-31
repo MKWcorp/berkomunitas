@@ -3,7 +3,13 @@ import prisma from '../../../../../../lib/prisma';
 import { requireAdmin } from '../../../../../../lib/requireAdmin';
 
 export async function DELETE(request, { params }) {
-  if (!await requireAdmin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const authCheck = await requireAdmin(request);
+  if (!authCheck.success) {
+    return NextResponse.json(
+      { error: authCheck.error || 'Forbidden' },
+      { status: authCheck.status || 403 }
+    );
+  }
   
   const { id } = await params;
   

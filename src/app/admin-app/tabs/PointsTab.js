@@ -1,12 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { MagnifyingGlassIcon, CalendarIcon, UserIcon, PlusIcon, ChartBarIcon, CurrencyDollarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import GlassCard from '../../components/GlassCard';
 import AdminModal from '../components/AdminModal';
 
 export default function PointsTab() {
-  const { user } = useUser();
+  const { user } = useSSOUser();
   
   const [history, setHistory] = useState([]);
   const [members, setMembers] = useState([]);
@@ -52,7 +52,7 @@ export default function PointsTab() {
       if (filters.endDate) params.append('endDate', filters.endDate);
 
       const response = await fetch(`/api/admin/points?${params}`, {
-        headers: { 'x-user-email': user?.primaryEmailAddress?.emailAddress }
+        headers: { 'x-user-email': user?.email }
       });
 
       if (response.ok) {
@@ -105,7 +105,7 @@ export default function PointsTab() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user?.primaryEmailAddress?.emailAddress
+          'x-user-email': user?.email
         },
         body: JSON.stringify({
           member_id: parseInt(addPointForm.member_id),

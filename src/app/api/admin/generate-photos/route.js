@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import prisma from '@/utils/prisma';
+import { getCurrentUser } from '@/lib/ssoAuth';
+import prisma from '@/lib/prisma';
 
 // Avatar generation logic (moved from script)
 const AVATAR_SERVICES = {
@@ -58,8 +58,8 @@ async function updateMemberPhoto(memberId, photoUrl, source) {
 export async function POST(request) {
   try {
     // Basic auth check (optional - add admin privilege check here)
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

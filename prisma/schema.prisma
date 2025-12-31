@@ -353,11 +353,14 @@ model member_badges {
 
 model member_emails {
   id         Int      @id @default(autoincrement())
-  clerk_id   String   @db.VarChar(255)
+  clerk_id   String?  @db.VarChar(255)
+  member_id  Int?
   email      String   @unique @db.VarChar(255)
   is_primary Boolean? @default(false)
   verified   Boolean? @default(false)
-  members    members  @relation(fields: [clerk_id], references: [clerk_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_clerk_id")
+  members    members? @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_member_emails_member_id")
+
+  @@index([member_id], map: "idx_member_emails_member_id")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -408,6 +411,12 @@ model members {
   status_kustom                                                   String?
   featured_badge_id                                               String?
   coin                                                            Int                     @default(0)
+  google_id                                                       String?                 @unique
+  email                                                           String?                 @unique
+  last_login_at                                                   DateTime?               @db.Timestamptz(6)
+  sso_metadata                                                    Json?                   @default("{}")
+  platform_sessions                                               PlatformSession[]
+  user_activities                                                 UserActivity[]
   bc_drwskincare_plus                                             bc_drwskincare_plus?
   coin_history                                                    coin_history[]
   loyalty_point_history                                           loyalty_point_history[]
@@ -426,6 +435,8 @@ model members {
 
   @@index([coin], map: "idx_members_coin")
   @@index([loyalty_point], map: "idx_members_loyalty_point")
+  @@index([google_id], map: "idx_members_google_id")
+  @@index([email], map: "idx_members_email")
 }
 
 model notifications {
@@ -523,13 +534,13 @@ model reward_redemptions {
   points_spent     Int
   redeemed_at      DateTime? @default(now()) @db.Timestamptz(6)
   status           String?   @default("menunggu_verifikasi") @db.VarChar(50)
-  shipping_notes   String?
-  shipping_method  String?   @default("separate") @db.VarChar(50)
-  shipped_at       DateTime? @db.Timestamp(6)
   delivered_at     DateTime? @db.Timestamp(6)
-  shipping_cost    Int?      @default(0)
-  redemption_notes String?
   quantity         Int       @default(1)
+  redemption_notes String?
+  shipped_at       DateTime? @db.Timestamp(6)
+  shipping_cost    Int?      @default(0)
+  shipping_method  String?   @default("separate") @db.VarChar(50)
+  shipping_notes   String?
   members          members   @relation(fields: [id_member], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_member")
   rewards          rewards   @relation(fields: [id_reward], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reward")
 }
@@ -544,10 +555,10 @@ model rewards {
   is_active             Boolean?             @default(true)
   created_at            DateTime?            @default(now()) @db.Timestamptz(6)
   foto_url              String?
-  required_privilege    String?              @db.VarChar(50)
-  privilege_description String?
-  is_exclusive          Boolean?             @default(false)
   category_id           Int?
+  is_exclusive          Boolean?             @default(false)
+  privilege_description String?
+  required_privilege    String?              @db.VarChar(50)
   reward_redemptions    reward_redemptions[]
   reward_categories     reward_categories?   @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -594,7 +605,7 @@ model task_submissions {
   validation_status                        String?   @db.VarChar(50)
   scheduled_check_at                       DateTime? @db.Timestamptz(6)
   gagal_diverifikasi_verification_attempts Int?      @default(0)
-  tugas_ai                                 tugas_ai  @relation(fields: [id_task], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_task_submissions_tugas_ai")
+  tugas_ai                                 tugas_ai  @relation(fields: [id_task], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_submissions_tugas_ai")
   members                                  members   @relation(fields: [id_member], references: [id])
 
   @@unique([id_member, id_task], map: "unique_member_task")
@@ -637,9 +648,11 @@ model user_privileges {
   expires_at DateTime? @db.Timestamptz(6)
   is_active  Boolean   @default(true)
   clerk_id   String?   @db.VarChar(255)
-  members    members?  @relation(fields: [clerk_id], references: [clerk_id], onDelete: Cascade, map: "fk_user_privileges_members_clerkid")
+  member_id  Int?
+  members    members?  @relation(fields: [member_id], references: [id], onDelete: Cascade, map: "fk_user_privileges_member_id")
 
   @@index([privilege])
+  @@index([member_id], map: "idx_user_privileges_member_id")
 }
 
 model user_usernames {
@@ -670,10 +683,59 @@ model bc_drwskincare_plus_verified {
   kabupaten           String?              @db.VarChar(255)
   propinsi            String?              @db.VarChar(255)
   kode_pos            String?              @db.VarChar(10)
-  alamat_detail       String?              @db.Text
+  alamat_detail       String?
   bc_drwskincare_api  bc_drwskincare_api?  @relation(fields: [api_data_id], references: [id], onUpdate: NoAction)
   bc_drwskincare_plus bc_drwskincare_plus? @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([api_data_id], map: "idx_bc_drwskincare_plus_verified_api_data_id")
   @@index([created_at], map: "idx_bc_drwskincare_plus_verified_created_at")
+}
+
+model PlatformSession {
+  id               String    @id
+  member_id        Int
+  platform         String
+  jwt_token        String
+  refresh_token    String?
+  expires_at       DateTime  @db.Timestamptz(6)
+  ip_address       String?
+  user_agent       String?
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  last_activity_at DateTime? @default(now()) @db.Timestamptz(6)
+  member           members   @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([member_id], map: "idx_platform_session_member")
+  @@index([platform], map: "idx_platform_session_platform")
+  @@index([expires_at], map: "idx_platform_session_expires")
+}
+
+model UserActivity {
+  id            String    @id
+  member_id     Int
+  platform      String
+  activity_type String
+  points_earned Int?      @default(0)
+  metadata      Json?     @default("{}")
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  member        members   @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([member_id], map: "idx_user_activity_member")
+  @@index([platform], map: "idx_user_activity_platform")
+  @@index([activity_type], map: "idx_user_activity_type")
+  @@index([created_at(sort: Desc)], map: "idx_user_activity_created")
+}
+
+model RegisteredPlatform {
+  id              String    @id
+  name            String    @unique
+  domain          String
+  api_key         String    @unique
+  is_active       Boolean?  @default(true)
+  allowed_origins String[]  @default([])
+  metadata        Json?     @default("{}")
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([name], map: "idx_platform_name")
+  @@index([is_active], map: "idx_platform_active")
 }

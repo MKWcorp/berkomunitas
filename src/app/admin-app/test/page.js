@@ -1,9 +1,9 @@
 'use client';
-import { useUser } from '@clerk/nextjs';
+import { useSSOUser } from '@/hooks/useSSOUser';
 import { useEffect, useState } from 'react';
 
 export default function AdminSubdomainTest() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSSOUser();
   const [info, setInfo] = useState({});
   const [apiTest, setApiTest] = useState(null);
 
@@ -92,14 +92,12 @@ export default function AdminSubdomainTest() {
             <div>
               <h3 className="font-bold mb-2">Clerk Auth:</h3>
               <div className="space-y-2">
-                <p><strong>Clerk Loaded:</strong> {isLoaded ? '✅ Yes' : '❌ No'}</p>
-                <p><strong>User Exists:</strong> {user ? '✅ Yes' : '❌ No'}</p>
+                <p><strong>Clerk Loaded:</strong> {isLoaded ? '✅ Yes' : '❌ No'}</p>                <p><strong>User Exists:</strong> {user ? '✅ Yes' : '❌ No'}</p>
                 {user && (
                   <>
                     <p><strong>User ID:</strong> {user.id}</p>
-                    <p><strong>Email:</strong> {user.primaryEmailAddress?.emailAddress}</p>
-                    <p><strong>First Name:</strong> {user.firstName}</p>
-                    <p><strong>Last Name:</strong> {user.lastName}</p>
+                    <p><strong>Email:</strong> {user.email}</p>
+                    <p><strong>Name:</strong> {user.name}</p>
                   </>
                 )}
               </div>

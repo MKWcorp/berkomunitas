@@ -1,80 +1,151 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+// SSO Middleware - Simple route protection like Clerk
 import { NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
-const isPublicRoute = createRouteMatcher([
+// Public routes that ANYONE can access (no auth needed)
+const publicRoutes = [
   "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/webhooks(.*)",
+  "/login",
+  "/sign-in",
+  "/sign-up", 
+  "/api/sso",
+  "/api/webhooks",
   "/faq",
   "/landing",
-  "/leaderboard",
-  "/api/leaderboard(.*)",
-  "/api/dashboard",
   "/user-guide",
   "/privacy-policy",
-  "/terms-of-service",
-  "/terms",
-  "/profil(.*)",
-  "/api/profil(.*)",
+  "/api/dashboard", // Public dashboard stats
+];
+
+// Routes that REQUIRE authentication
+const protectedRoutes = [
+  "/profil",
   "/tugas",
-  "/tugas/(.*)",
-  "/api/tugas/(.*)",
-  "/custom-dashboard/drwcorp",
-  "/api/custom-dashboard/drwcorp"
-]);
+  "/rewards",
+  "/loyalty",
+  "/coins",
+  "/security",
+  "/plus",
+  "/leaderboard",
+  "/custom-dashboard",
+  "/rewards-app",
+  "/api/profil",
+  "/api/tugas/submit",
+  "/api/rewards",
+  "/api/admin",
+  "/api/custom-dashboard",
+];
 
-const isProtectedRoute = createRouteMatcher([
-  "/custom-dashboard(.*)",
-  "/api/custom-dashboard(.*)"
-]);
+// Helper function to check if path matches route pattern
+function matchesRoute(pathname, routes) {
+  return routes.some(route => {
+    if (route.endsWith('*')) {
+      return pathname.startsWith(route.slice(0, -1));
+    }
+    return pathname === route || pathname.startsWith(route + '/');
+  });
+}
 
-export default clerkMiddleware(async (auth, req) => {
-  // Allow static files immediately
-  if (req.nextUrl.pathname.startsWith('/_next') ||
-      req.nextUrl.pathname.includes('.') ||
-      req.nextUrl.pathname === '/favicon.ico') {
-    return;
+// Helper function to verify JWT token
+async function verifyToken(token) {
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
+
+export default async function middleware(req) {
+  const { pathname } = req.nextUrl;
+  
+  console.log('[SSO Middleware]', pathname);
+
+  // 1. Allow static files and Next.js internals
+  if (pathname.startsWith('/_next') ||
+      pathname.includes('.') ||
+      pathname === '/favicon.ico') {
+    return NextResponse.next();
   }
 
-  // Force social-only authentication for sign-in and sign-up routes
-  if (req.nextUrl.pathname.startsWith('/sign-in') || req.nextUrl.pathname.startsWith('/sign-up')) {
-    // Allow access to social login pages
-    return;
+  // 2. Redirect old Clerk routes to SSO login
+  if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) {
+    return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // If maintenance mode enabled, redirect all non-exempt routes to /maintenance
+  // 3. Maintenance mode check
   const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true';
   if (MAINTENANCE_MODE) {
-    // Allow the maintenance page itself to avoid redirect loop
-    if (req.nextUrl.pathname === '/maintenance') return;
-
-    // Allow Clerk webhooks and other critical API endpoints to function
-    if (req.nextUrl.pathname.startsWith('/api/webhooks') || req.nextUrl.pathname.startsWith('/api/webhook')) {
-      return;
+    if (pathname === '/maintenance') return NextResponse.next();
+    if (pathname.startsWith('/api/webhooks') || 
+        pathname.startsWith('/api/webhook') ||
+        pathname.startsWith('/api/sso')) {
+      return NextResponse.next();
     }
-
-    // Allow static assets already handled above; everything else redirect
     return NextResponse.redirect(new URL('/maintenance', req.url));
   }
 
-  // For protected routes, ensure user is authenticated
-  if (isProtectedRoute(req)) {
-    const { userId } = await auth();
-    if (!userId) {
-      // Redirect to sign-in if not authenticated
-      return NextResponse.redirect(new URL('/sign-in', req.url));
+  // 4. Check if route is public (allow without auth)
+  if (matchesRoute(pathname, publicRoutes)) {
+    return NextResponse.next();
+  }
+  // 5. Check if route is protected (requires auth)
+  if (matchesRoute(pathname, protectedRoutes)) {
+    // Get token from cookies or Authorization header
+    const accessToken = req.cookies.get('access_token')?.value || 
+                       req.headers.get('authorization')?.replace('Bearer ', '');
+    
+    console.log('[SSO Middleware] Protected route:', pathname, 'Token:', accessToken ? 'EXISTS' : 'MISSING');
+    
+    if (!accessToken) {
+      // For API routes, return 401 Unauthorized
+      if (pathname.startsWith('/api/')) {
+        console.log('[SSO Middleware] API route without token - returning 401');
+        return NextResponse.json(
+          { success: false, message: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      
+      // For pages, redirect to login with return URL
+      console.log('[SSO Middleware] Page without token - redirecting to login');
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('returnUrl', pathname);
+      return NextResponse.redirect(loginUrl);
     }
+
+    // Verify token is valid
+    const payload = await verifyToken(accessToken);
+    console.log('[SSO Middleware] Token verification:', payload ? 'VALID' : 'INVALID');
+    
+    if (!payload) {
+      // Token invalid or expired
+      if (pathname.startsWith('/api/')) {
+        console.log('[SSO Middleware] API route with invalid token - returning 401');
+        return NextResponse.json(
+          { success: false, message: 'Invalid or expired token' },
+          { status: 401 }
+        );
+      }
+      
+      console.log('[SSO Middleware] Page with invalid token - redirecting to login');
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('returnUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Token valid - add user info to headers for API routes
+    console.log('[SSO Middleware] Token valid - allowing access');
+    const response = NextResponse.next();
+    response.headers.set('x-user-id', payload.userId?.toString() || '');
+    response.headers.set('x-user-email', payload.email || '');
+    return response;
   }
 
-  // Allow public routes
-  if (isPublicRoute(req)) {
-    return;
-  }
-
-  // Default: allow the request
-  return;
-});
+  // 6. Default: allow the request (for routes not explicitly protected)
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
