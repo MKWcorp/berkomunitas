@@ -6,6 +6,8 @@ import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
+import { retryPrismaOperation } from '@/lib/prisma-retry';
+
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
@@ -43,21 +45,24 @@ export async function POST(request) {
     }
 
     // Check if user exists by email OR google_id (for existing users)
-    let member = await prisma.members.findFirst({
-      where: {
-        OR: [
-          { email: email },
-          { google_id: googleId },
-        ],
-      },
+    let member = await retryPrismaOperation(async () => {
+      return await prisma.members.findFirst({
+        where: {
+          OR: [
+            { email: email },
+            { google_id: googleId },
+          ],
+        },
+      });
     });
 
     if (member) {
       // User exists - Update with Google info (auto-link old Clerk users)
-      member = await prisma.members.update({
-        where: { id: member.id },
-        data: {
-          email: email, // Update email if it was empty (old Clerk users)
+      member = await retryPrismaOperation(async () => {
+        return await prisma.members.update({
+          where: { id: member.id },
+          data: {
+            email: email, // Update email if it was empty (old Clerk users)
           google_id: googleId, // Link Google ID
           last_login_at: new Date(),
           nama_lengkap: member.nama_lengkap || name, // Keep existing name, or use Google name
@@ -71,29 +76,34 @@ export async function POST(request) {
           },
         },
       });
+      });
     } else {
       // New user - Create account
-      member = await prisma.members.create({
-        data: {
-          email,
-          google_id: googleId,
-          nama_lengkap: name || email.split('@')[0],
-          foto_profil_url: picture,
-          last_login_at: new Date(),
-          tanggal_daftar: new Date(),
-          loyalty_point: 0,
-          coin: 0,
-          sso_metadata: {
-            firstLoginPlatform: platform || 'Berkomunitas',
-            registeredVia: 'google_sso',
-            googleEmail: email,
-            picture,
+      member = await retryPrismaOperation(async () => {
+        return await prisma.members.create({
+          data: {
+            email,
+            google_id: googleId,
+            nama_lengkap: name || email.split('@')[0],
+            foto_profil_url: picture,
+            last_login_at: new Date(),
+            tanggal_daftar: new Date(),
+            loyalty_point: 0,
+            coin: 0,
+            sso_metadata: {
+              firstLoginPlatform: platform || 'Berkomunitas',
+              registeredVia: 'google_sso',
+              googleEmail: email,
+              picture,
           },
-        },
-      });
+        },        });      });
     }
 
     // Generate JWT tokens
+    console.log('[Google Login] Signing token with JWT_SECRET length:', JWT_SECRET ? JWT_SECRET.length : 'undefined');
+    console.log('[Google Login] JWT_SECRET first 20 chars:', JWT_SECRET ? JWT_SECRET.substring(0, 20) : 'N/A');
+    console.log('[Google Login] JWT_SECRET last 20 chars:', JWT_SECRET ? JWT_SECRET.substring(JWT_SECRET.length - 20) : 'N/A');
+    
     const accessToken = jwt.sign(
       {
         memberId: member.id,
@@ -104,6 +114,8 @@ export async function POST(request) {
       JWT_SECRET,
       { expiresIn: '7d' } // 7 days
     );
+    
+    console.log('[Google Login] Generated token first 50 chars:', accessToken.substring(0, 50));
 
     const refreshToken = jwt.sign(
       { memberId: member.id },
@@ -116,57 +128,61 @@ export async function POST(request) {
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       const activityId = `activity_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-      await prisma.$transaction([
-        prisma.platformSession.create({
-          data: {
-            id: sessionId,
-            member_id: member.id,
-            platform: platform || 'Berkomunitas',
-            jwt_token: accessToken,
-            refresh_token: refreshToken,
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-            ip_address: request.headers.get('x-forwarded-for') || 'unknown',
-            user_agent: request.headers.get('user-agent') || 'unknown',
-          },
-        }),
-        prisma.userActivity.create({
-          data: {
-            id: activityId,
-            member_id: member.id,
-            platform: platform || 'Berkomunitas',
-            activity_type: 'login',
-            points_earned: 1, // 1 coin for login
-            metadata: {
-              loginMethod: 'google',
-              loginTime: new Date().toISOString(),
+      await retryPrismaOperation(async () => {
+        return await prisma.$transaction([
+          prisma.platformSession.create({
+            data: {
+              id: sessionId,
+              member_id: member.id,
+              platform: platform || 'Berkomunitas',
+              jwt_token: accessToken,
+              refresh_token: refreshToken,
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+              ip_address: request.headers.get('x-forwarded-for') || 'unknown',
+              user_agent: request.headers.get('user-agent') || 'unknown',
             },
-          },
-        }),
-        prisma.members.update({
-          where: { id: member.id },
-          data: {
-            coin: { increment: 1 },
-            loyalty_point: { increment: 1 },
-          },
-        }),
-        prisma.coin_history.create({
-          data: {
-            member_id: member.id,
-            event: 'Login via Google SSO',
-            coin: 1,
-            event_type: 'login',
-          },
-        }),        prisma.loyalty_point_history.create({
-          data: {
-            member_id: member.id,
-            event: 'Login via Google SSO',
-            point: 1,
-          },
-        }),
-      ]);
+          }),
+          prisma.userActivity.create({
+            data: {
+              id: activityId,
+              member_id: member.id,
+              platform: platform || 'Berkomunitas',
+              activity_type: 'login',
+              points_earned: 1, // 1 coin for login
+              metadata: {
+                loginMethod: 'google',
+                loginTime: new Date().toISOString(),
+              },
+            },
+          }),
+          prisma.members.update({
+            where: { id: member.id },
+            data: {
+              coin: { increment: 1 },
+              loyalty_point: { increment: 1 },
+            },
+          }),
+          prisma.coin_history.create({
+            data: {
+              member_id: member.id,
+              event: 'Login via Google SSO',
+              coin: 1,
+              event_type: 'login',
+            },
+          }),        prisma.loyalty_point_history.create({
+            data: {
+              member_id: member.id,
+              event: 'Login via Google SSO',
+              point: 1,
+            },
+          }),
+        ]);
+      });
 
       // fetch updated member to return accurate coin/loyalty values
-      const updatedMember = await prisma.members.findUnique({ where: { id: member.id } });
+      const updatedMember = await retryPrismaOperation(async () => {
+        return await prisma.members.findUnique({ where: { id: member.id } });
+      });
 
       // Create response with cookies
       const response = NextResponse.json({

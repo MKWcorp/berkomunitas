@@ -49,10 +49,17 @@ function matchesRoute(pathname, routes) {
 // Helper function to verify JWT token
 async function verifyToken(token) {
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
+    const secret = process.env.JWT_SECRET;
+    console.log('[Middleware] JWT_SECRET length:', secret ? secret.length : 'undefined');
+    console.log('[Middleware] JWT_SECRET first 20 chars:', secret ? secret.substring(0, 20) : 'N/A');
+    
+    // Use jose (Edge-compatible) to verify tokens signed by jsonwebtoken
+    // Convert secret string to Uint8Array for jose
+    const secretKey = new TextEncoder().encode(secret);
+    const { payload } = await jwtVerify(token, secretKey);
     return payload;
   } catch (error) {
+    console.log('[Middleware] Token verification error:', error.message);
     return null;
   }
 }
@@ -120,25 +127,64 @@ export default async function middleware(req) {
     console.log('[SSO Middleware] Token verification:', payload ? 'VALID' : 'INVALID');
     
     if (!payload) {
-      // Token invalid or expired
+      // Token invalid or expired - clear old cookies
       if (pathname.startsWith('/api/')) {
         console.log('[SSO Middleware] API route with invalid token - returning 401');
-        return NextResponse.json(
-          { success: false, message: 'Invalid or expired token' },
+        const response = NextResponse.json(
+          { success: false, message: 'Invalid or expired token', clearTokens: true },
           { status: 401 }
         );
+        // Clear old tokens
+        response.cookies.delete('access_token');
+        response.cookies.delete('refresh_token');
+        response.cookies.delete('__session'); // Old Clerk cookie
+        response.cookies.delete('__clerk_db_jwt'); // Old Clerk cookie
+        return response;
       }
       
       console.log('[SSO Middleware] Page with invalid token - redirecting to login');
       const loginUrl = new URL('/login', req.url);
       loginUrl.searchParams.set('returnUrl', pathname);
-      return NextResponse.redirect(loginUrl);
+      loginUrl.searchParams.set('clearCache', 'true'); // Signal to clear cache
+      const response = NextResponse.redirect(loginUrl);
+      // Clear old tokens
+      response.cookies.delete('access_token');
+      response.cookies.delete('refresh_token');
+      response.cookies.delete('__session'); // Old Clerk cookie
+      response.cookies.delete('__clerk_db_jwt'); // Old Clerk cookie
+      return response;
+    }
+    
+    // Check if this is an old Clerk token (has userId instead of memberId)
+    if (payload.userId && !payload.memberId) {
+      console.log('[SSO Middleware] Detected old Clerk token - forcing re-login');
+      if (pathname.startsWith('/api/')) {
+        const response = NextResponse.json(
+          { success: false, message: 'Please login again with new SSO system', oldToken: true },
+          { status: 401 }
+        );
+        response.cookies.delete('access_token');
+        response.cookies.delete('refresh_token');
+        response.cookies.delete('__session');
+        response.cookies.delete('__clerk_db_jwt');
+        return response;
+      }
+      
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('returnUrl', pathname);
+      loginUrl.searchParams.set('oldToken', 'true');
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.delete('access_token');
+      response.cookies.delete('refresh_token');
+      response.cookies.delete('__session');
+      response.cookies.delete('__clerk_db_jwt');
+      return response;
     }
 
     // Token valid - add user info to headers for API routes
     console.log('[SSO Middleware] Token valid - allowing access');
     const response = NextResponse.next();
-    response.headers.set('x-user-id', payload.userId?.toString() || '');
+    response.headers.set('x-user-id', payload.memberId?.toString() || '');
     response.headers.set('x-user-email', payload.email || '');
     return response;
   }

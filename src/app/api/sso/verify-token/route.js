@@ -5,6 +5,8 @@
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { retryPrismaOperation } from '@/lib/prisma-retry';
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function POST(request) {
@@ -21,24 +23,26 @@ export async function POST(request) {
     // Verify JWT
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Get user data
-    const member = await prisma.members.findUnique({
-      where: { id: decoded.memberId },
-      select: {
-        id: true,
-        email: true,
-        nama_lengkap: true,
-        google_id: true,
-        foto_profil_url: true,
-        coin: true,
-        loyalty_point: true,
-        last_login_at: true,
-        user_privileges: {
-          select: {
-            privilege: true,
+    // Get user data with retry logic
+    const member = await retryPrismaOperation(async () => {
+      return await prisma.members.findUnique({
+        where: { id: decoded.memberId },
+        select: {
+          id: true,
+          email: true,
+          nama_lengkap: true,
+          google_id: true,
+          foto_profil_url: true,
+          coin: true,
+          loyalty_point: true,
+          last_login_at: true,
+          user_privileges: {
+            select: {
+              privilege: true,
+            },
           },
         },
-      },
+      });
     });
 
     if (!member) {
@@ -48,15 +52,19 @@ export async function POST(request) {
       );
     }
 
-    // Update last activity
-    await prisma.platformSession.updateMany({
-      where: {
-        member_id: member.id,
-        jwt_token: token,
-      },
-      data: {
-        last_activity_at: new Date(),
-      },
+    // Update last activity with retry logic (non-blocking, ignore errors)
+    retryPrismaOperation(async () => {
+      return await prisma.platformSession.updateMany({
+        where: {
+          member_id: member.id,
+          jwt_token: token,
+        },
+        data: {
+          last_activity_at: new Date(),
+        },
+      });
+    }).catch(err => {
+      console.error('Failed to update session activity (non-critical):', err.message);
     });
 
     // Check if user is admin

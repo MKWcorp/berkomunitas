@@ -18,7 +18,25 @@ export default function LoginPage() {
     // Get return URL from query params
     const params = new URLSearchParams(window.location.search);
     const url = params.get('returnUrl') || '/';
+    const clearCache = params.get('clearCache');
+    const oldToken = params.get('oldToken');
     setReturnUrl(url);
+
+    // Auto-clear old tokens if flagged by middleware
+    if (clearCache === 'true' || oldToken === 'true') {
+      console.log('[Login Page] Clearing old Clerk tokens...');
+      localStorage.clear();
+      sessionStorage.clear();
+      // Clear all cookies
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      if (oldToken === 'true') {
+        setError('Your login session has expired. Please sign in again with Google.');
+      }
+      setCheckingAuth(false);
+      return;
+    }
 
     // Check if user is logged in with valid token
     const checkAuth = async () => {

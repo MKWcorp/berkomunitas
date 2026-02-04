@@ -90,6 +90,17 @@ export default function ProfileDashboard() {
             const incomplete = !d.member?.nama_lengkap || !d.member?.nomer_wa || (d.socialProfiles || []).length === 0;
             setIsProfileIncomplete(incomplete);
           } else if (res.status === 401) {
+            // Check if it's an old token issue
+            if (data.oldToken || data.clearTokens) {
+              console.log('[Profile] Detected old token, clearing and redirecting...');
+              localStorage.clear();
+              sessionStorage.clear();
+              document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+              });
+              window.location.href = '/login?oldToken=true';
+              return;
+            }
             setMessage('Silakan login untuk melihat profil.');
           } else {
             setMessage(data.error || 'Gagal memuat data profil');
