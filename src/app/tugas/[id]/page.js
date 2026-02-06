@@ -448,199 +448,190 @@ export default function TaskDetailPage() {
   const isCompleted = task.status_submission === 'selesai';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-2 sm:p-6 pb-20">
+      <div className="max-w-xl mx-auto space-y-3 sm:space-y-4">
         {showConfetti && (
           <Confetti numberOfPieces={120} recycle={false} width={window.innerWidth} height={window.innerHeight} />
         )}
         
-        {/* Header */}
-        <GlassCard className="mb-6">
-          <div className="flex justify-between items-center">
-            <button onClick={() => router.push('/tugas')} className="text-gray-500 hover:text-blue-600 p-2 rounded-lg transition-colors">
-              <span className="sr-only">Kembali ke Daftar Tugas</span>
-              <ArrowLeftIcon className="w-6 h-6" />
-            </button>
-            
-            <div className="flex items-center gap-2">
-              {/* Share Button */}
-              <button 
-                onClick={handleShare} 
-                className="p-2 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all text-blue-600 hover:text-blue-700"
-              >
-                <span className="sr-only">Share</span>
-                <ShareIcon className="w-5 h-5" />
-              </button>
-
-              {/* Delete Button - Admin Only */}
-              {isAdmin && (
-                <button 
-                  onClick={handleDeleteTask}
-                  disabled={deleteLoading}
-                  className="p-2 hover:bg-red-100 rounded-lg border border-red-200 transition-all text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Hapus Tugas (Admin Only)"
-                >
-                  <span className="sr-only">Hapus Tugas</span>
-                  {deleteLoading ? (
-                    <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <TrashIcon className="w-5 h-5" />
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </GlassCard>
-
+        {/* Share Message Toast */}
         {shareMessage && (
-          <GlassCard variant="subtle" className="mb-6 text-center">
-            <p className="text-gray-700">{shareMessage}</p>
+          <GlassCard variant="subtle" className="text-center py-2 px-4 fixed top-4 left-1/2 transform -translate-x-1/2 z-50 shadow-lg bg-green-50 border border-green-200">
+            <p className="text-xs sm:text-sm text-green-800 font-medium">{shareMessage}</p>
           </GlassCard>
         )}
 
         {/* Task Detail Card */}
-        <GlassCard className={`mb-6 ${isCompleted ? 'opacity-70' : ''}`}>
-          <h1 className={`text-2xl font-bold mb-4 text-gray-800 ${isCompleted ? 'line-through' : ''}`}>
-            {task.nama_tugas}
-          </h1>
-          
-          {task.post_timestamp && !isNaN(new Date(task.post_timestamp).getTime()) && (
-            <p className="text-sm text-gray-500 mb-4 flex items-center gap-2">
-              <ClockIcon className="w-4 h-4" />
-              Dibuat: {typeof task.post_timestamp === 'string' ? task.post_timestamp.replace('T', ' ').slice(0, 19) : ''}
-            </p>
-          )}
+        <GlassCard className={`relative overflow-hidden ${isCompleted ? 'opacity-80' : ''}`} padding="none">
+          <div className="p-4 sm:p-6">
+            {/* Header: Title & Actions */}
+            <div className="flex justify-between items-start gap-3 mb-3">
+              <h1 className={`text-lg sm:text-xl font-bold text-gray-800 leading-tight ${isCompleted ? 'line-through text-gray-500' : ''}`}>
+                {task.nama_tugas}
+              </h1>
+              
+              <div className="flex items-center gap-1 flex-shrink-0">
+                 {/* Share Button */}
+                <button 
+                  onClick={handleShare} 
+                  className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
+                  title="Bagikan Task Ini"
+                >
+                  <ShareIcon className="w-5 h-5" />
+                </button>
 
-          <div className="mb-6">
-            <div className="text-sm text-gray-700 mb-2 font-semibold">Deskripsi</div>
-            <div className={`text-gray-600 ${isCompleted ? 'line-through' : ''}`}>
-              {task.deskripsi_tugas}
+                {/* Admin Delete Button */}
+                {isAdmin && (
+                  <button 
+                    onClick={handleDeleteTask}
+                    disabled={deleteLoading}
+                    className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-colors"
+                  >
+                    {deleteLoading ? (
+                      <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <TrashIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+            
+            {/* Metadata Grid (Compact) */}
+            <div className="flex flex-wrap gap-2 mb-4 text-xs text-gray-600 border-b border-gray-100 pb-3">
+               {/* Time */}
+               {task.post_timestamp && (
+                 <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
+                   <ClockIcon className="w-3.5 h-3.5" />
+                   <span>{new Date(task.post_timestamp).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: '2-digit'})}</span>
+                 </div>
+               )}
+               
+               {/* Keyword */}
+               <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded max-w-full">
+                  <span className="font-semibold text-gray-500 whitespace-nowrap">Key:</span>
+                  <span className="font-mono text-gray-700 break-all">
+                    {task.keyword_tugas && task.keyword_tugas !== 'null' ? task.keyword_tugas : '-'}
+                  </span>
+               </div>
 
-          <div className="mb-4">
-            <div className="text-sm text-gray-500 flex items-center gap-2">
-              <span>Keyword:</span>
-              <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs">
-                {task.keyword_tugas && task.keyword_tugas !== 'null' ? task.keyword_tugas : 'Tugas Tanpa Keyword, Tinggalkan saja Komentarmu!'}
-              </span>
+                {/* Reward */}
+               {task.point_value && (
+                <div className="flex items-center gap-1 bg-yellow-50 text-yellow-800 px-2 py-1 rounded ml-auto">
+                    <TrophyIcon className="w-3.5 h-3.5" />
+                    <span className="font-bold">+{task.point_value}</span>
+                    <div className="scale-75 origin-left">
+                        <EventBoostRewardDisplay 
+                          isActive={isEventActive}
+                          boostPercentage={boostPercentage}
+                        />
+                    </div>
+                </div>
+               )}
             </div>
-          </div>          {task.point_value && (
-            <div className="mb-6 flex items-center gap-2 text-yellow-700">
-              <TrophyIcon className="w-5 h-5" />
-              <span className="font-semibold">Reward: {task.point_value} Poin</span>
-              <EventBoostRewardDisplay 
-                isActive={isEventActive}
-                boostPercentage={boostPercentage}
-              />
-            </div>
-          )}
 
-          {/* Link Postingan */}
-          {task.link_postingan && (
-            <div className="mb-6">
+            {/* Description */}
+            <div className="mb-4">
+              <div className={`text-sm text-gray-600 leading-relaxed ${isCompleted ? 'line-through opacity-70' : ''}`}>
+                {task.deskripsi_tugas}
+              </div>
+            </div>
+
+            {/* Link Postingan Button (Full Width) */}
+            {task.link_postingan && (
               <a 
                 href={task.link_postingan}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-3 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors"
+                className="flex items-center justify-center gap-2 w-full p-2.5 mb-4 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
               >
-                <ShareIcon className="w-5 h-5" />
-                <span className="font-medium">Lihat Postingan Asli</span>
+                <ShareIcon className="w-4 h-4" />
+                Buka Postingan Asli
               </a>
-            </div>
-          )}
+            )}
 
-          {/* Action Button */}
-          <div className="flex justify-center">
-            {renderTaskButton()}
+            {/* Main Action Button */}
+            <div className="flex justify-center w-full">
+              <div className="w-full">
+                {renderTaskButton()}
+              </div>
+            </div>
+
+            {/* Helper Texts */}
+            {!isSignedIn && (
+                <p className="mt-3 text-center text-xs text-gray-400">
+                Login untuk mulai mengerjakan
+                </p>
+            )}
+            
+            {/* Completion Status Box */}
+            {isCompleted && isSignedIn && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                <CheckCircleIcon className="w-5 h-5 text-green-600 mt-0.5" />
+                <div>
+                    <p className="text-sm font-semibold text-green-800">Tugas Selesai!</p>
+                    {task.completion_timestamp && (
+                        <p className="text-xs text-green-600 mt-0.5">
+                            {new Date(task.completion_timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </p>
+                    )}
+                </div>
+              </div>
+            )}
           </div>
-
-          {!isSignedIn && (
-            <div className="mt-4 text-center text-sm text-gray-500">
-              Login untuk melacak progress tugas & dapatkan poin reward!
-            </div>
-          )}
-
-          {isSignedIn && !isProfileComplete && !profileLoading && (
-            <div className="mt-4 text-center text-sm text-orange-600 bg-orange-50 p-3 rounded-lg border border-orange-200">
-              <div className="font-medium mb-1">Profil Belum Lengkap</div>
-              <div>Lengkapi profil sosial media Anda untuk dapat mengerjakan tugas dan mendapatkan poin reward!</div>
-            </div>
-          )}
         </GlassCard>
 
-        {/* Completed Members Table */}
+        {/* Completed Members List (Mobile First) */}
         {Array.isArray(task?.completed_members) && task.completed_members.length > 0 && (
-          <GlassCard className="mb-6">
-            <h3 className="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2">
-              <TrophyIcon className="w-6 h-6 text-yellow-600" />
-              Member yang sudah mengerjakan tugas ini
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">#</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nama</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Username</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Loyalty Point</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Selesai Pada</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {task.completed_members.map((member, idx) => (
-                    <tr key={member.id || idx} className="border-b border-gray-100">
-                      <td className="px-4 py-3 text-sm">{idx + 1}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {member.foto_profil_url && (
-                            <img 
-                              src={member.foto_profil_url} 
-                              alt="foto profil" 
-                              className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" 
-                            />
-                          )}
-                          <span className="text-sm font-medium">
-                            {member.display_name || member.nama_lengkap || '-'}
-                          </span>
+          <GlassCard className="flex-1 flex flex-col min-h-0" padding="none">
+             <div className="p-3 sm:p-4 border-b border-gray-100 flex justify-between items-center bg-white/40">
+                <h3 className="text-sm sm:text-base font-bold text-gray-700 flex items-center gap-2">
+                  <TrophyIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
+                  Selesai ({task.completed_members.length})
+                </h3>
+             </div>
+             
+             <div className="max-h-[40vh] overflow-y-auto p-0 sm:p-2 custom-scrollbar">
+                {task.completed_members.map((member, idx) => (
+                    <div key={member.id || idx} className="flex items-center gap-3 p-3 border-b last:border-0 border-gray-50 hover:bg-white/30 transition-colors">
+                        <span className="text-xs font-mono text-gray-400 w-5 flex-shrink-0">{idx + 1}</span>
+                        
+                        {/* Avatar */}
+                        <div className="flex-shrink-0">
+                           {member.foto_profil_url ? (
+                                <img 
+                                src={member.foto_profil_url} 
+                                alt="" 
+                                className="w-8 h-8 rounded-full object-cover border border-white shadow-sm" 
+                                />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                                    {member.display_name?.charAt(0) || '?'}
+                                </div>
+                            )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{member.username || '-'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <TrophyIcon className="w-4 h-4 text-yellow-600" />
-                          <span className="font-semibold text-yellow-700">{member.loyalty_point ?? 0}</span>
+                        
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate">
+                                {member.display_name || 'Member'}
+                            </p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                                @{member.username || '-'} • <span className="text-green-600">{new Date(member.tanggal_selesai).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</span>
+                            </p>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {member.tanggal_selesai && !isNaN(new Date(member.tanggal_selesai).getTime()) ? new Date(member.tanggal_selesai).toLocaleString('id-ID') : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        
+                        {/* Points Badge */}
+                        <div className="flex-shrink-0 flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100">
+                             <TrophyIcon className="w-3 h-3 text-yellow-600" />
+                             <span className="text-xs font-bold text-yellow-700">{member.loyalty_point ?? 0}</span>
+                        </div>
+                    </div>
+                ))}
+             </div>
           </GlassCard>
         )}
 
-        {/* Completion Celebration */}
-        {isCompleted && isSignedIn && (
-          <GlassCard variant="subtle" className="text-center border-l-4 border-green-500">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <CheckCircleIcon className="w-8 h-8 text-green-600" />
-              <span className="text-lg font-semibold text-green-800">
-                Selamat! Anda telah menyelesaikan tugas ini.
-              </span>
-            </div>
-            {task.completion_timestamp && !isNaN(new Date(task.completion_timestamp).getTime()) && (
-              <p className="text-sm text-green-600 flex items-center justify-center gap-2">
-                <ClockIcon className="w-4 h-4" />
-                Diselesaikan pada: {new Date(task.completion_timestamp).toLocaleString('id-ID')}
-              </p>
-            )}
-          </GlassCard>
-        )}
       </div>
     </div>
   );

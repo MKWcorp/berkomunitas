@@ -38,20 +38,20 @@ function StatCard({ title, value, _bgColor = 'bg-white', textColor = 'text-gray-
   return (
     <GlassCard 
       variant={isActive ? "strong" : "default"}
-      padding="lg"
-      className={`text-center cursor-pointer hover:scale-105 transform transition-all duration-300 ${activeClasses} relative group`}
+      padding="none"
+      className={`text-center cursor-pointer hover:scale-105 transform transition-all duration-300 ${activeClasses} relative group p-3 sm:p-5`}
       onClick={onClick}
       hover
     >
-      <h3 className="text-sm font-semibold text-gray-600 uppercase">{title}</h3>
-      <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
+      <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase truncate">{title}</h3>
+      <p className={`text-lg sm:text-2xl font-bold ${textColor} mt-1`}>{value}</p>
       {isActive && (
         <div className="mt-2">
           <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full"></span>
         </div>
       )}
       {tooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+        <div className="hidden sm:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
           {tooltip}
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
         </div>
@@ -512,9 +512,9 @@ export default function TugasPage() {
   if (error && !tasks.length) return <div className="text-center p-10 text-red-500">Error: {error}</div>;
   if (!memberId && !loading) return <div className="text-center p-10">Member tidak ditemukan. Mohon lengkapi profil Anda.</div>;
   return (
-    <GlassCard className="min-h-screen" padding="lg">
+    <GlassCard className="min-h-screen p-3 sm:p-6 lg:p-8" padding="none">
       {showConfetti && <Confetti numberOfPieces={200} recycle={false} width={window.innerWidth} height={window.innerHeight} />}
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Daftar Tugas AI</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Daftar Tugas AI</h1>
       
       {/* Profile Completion Banner */}
       {user && !profileLoading && (
@@ -556,30 +556,30 @@ export default function TugasPage() {
       )}
 
         {/* Task Statistics - Now Clickable for Filtering */}      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <StatCard 
-          title="Total Seluruh Tugas" 
+          title="Total" 
           value={statsLoading ? "..." : taskStats.total}
           textColor="text-indigo-800"
           onClick={() => handleFilterChange('semua')}
           isActive={filter === 'semua'}
         />
         <StatCard 
-          title="Total Tugas Selesai" 
+          title="Selesai" 
           value={statsLoading ? "..." : taskStats.completed}
           textColor="text-green-800"
           onClick={() => handleFilterChange('selesai')}
           isActive={filter === 'selesai'}
         />
         <StatCard 
-          title="Tugas Belum Selesai" 
+          title="Belum" 
           value={statsLoading ? "..." : taskStats.incomplete}
           textColor="text-amber-800"
           onClick={() => handleFilterChange('belum')}
           isActive={filter === 'belum'}
         />
         <StatCard 
-          title="Diverifikasi & Gagal" 
+          title="Verifikasi" 
           value={statsLoading ? "..." : taskStats.verifying}
           textColor="text-orange-800"
           onClick={() => handleFilterChange('verifikasi')}
@@ -588,45 +588,40 @@ export default function TugasPage() {
         />
       </div>{/* Add helpful text for users with active filter indicator */}
       <div className="mb-4">
-        <div className="flex items-center gap-4 mb-2">
-          <p className="text-sm text-gray-600">
-            💡 <strong>Tip:</strong> Klik pada kotak statistik di atas untuk memfilter tugas berdasarkan status
-          </p>
-          {filter !== 'semua' && (
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              Filter Aktif: {
-                filter === 'selesai' ? 'Tugas Selesai' : 
-                filter === 'verifikasi' ? 'Diverifikasi & Gagal (dengan tombol Coba Lagi)' : 
-                'Tugas Belum Selesai'
-              }
-              <button
-                onClick={() => handleFilterChange('semua')}
-                className="ml-1 text-blue-600 hover:text-blue-800"
-                title="Reset filter"
-              >
-                ✕
-              </button>
-            </span>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-2">
+          {!statsLoading && (
+            <button
+              onClick={fetchTaskStats}
+              className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 underline order-2 sm:order-1"
+            >
+              ↻ Refresh
+            </button>
           )}
+          
+          <div className="flex-1 order-1 sm:order-2">
+            {filter !== 'semua' && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                Filter: {
+                  filter === 'selesai' ? 'Selesai' : 
+                  filter === 'verifikasi' ? 'Verifikasi/Gagal' : 
+                  'Belum Selesai'
+                }
+                <button
+                  onClick={() => handleFilterChange('semua')}
+                  className="ml-1 text-blue-600 hover:text-blue-800 font-bold"
+                  title="Reset filter"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+          </div>
         </div>
-        {!statsLoading && (
-          <button
-            onClick={fetchTaskStats}
-            className="text-sm text-blue-600 hover:text-blue-800 underline"
-          >
-            ↻ Refresh Statistik
-          </button>
-        )}
-      </div>      <div className="space-y-4">
+      </div>      <div className="space-y-3 sm:space-y-4">
         {/* Show filtered count */}
         {filteredTasks.length > 0 && (
-          <div className="text-sm text-gray-500 mb-2">
+          <div className="text-xs sm:text-sm text-gray-500 mb-2">
             Menampilkan {filteredTasks.length} tugas
-            {filter !== 'semua' && ` (${
-              filter === 'selesai' ? 'selesai' : 
-              filter === 'verifikasi' ? 'diverifikasi & gagal' : 
-              'belum selesai'
-            })`}
           </div>
         )}        {filteredTasks.map((task, index) => {
           const isSelesai = task.status_submission === 'selesai';
@@ -635,60 +630,79 @@ export default function TugasPage() {
               ref={filteredTasks.length === index + 1 ? lastTaskElementRef : undefined} 
               key={`task-${task.id}`}
               variant={isSelesai ? "subtle" : "default"}
-              padding="lg"
-              className={`flex flex-col lg:flex-row lg:justify-between lg:items-center border-l-4 border-indigo-300/50 ${isSelesai ? 'opacity-75' : ''} gap-4 lg:gap-6`}
+              padding="none"
+              className={`flex flex-col gap-3 p-4 sm:p-6 lg:p-8 border-l-4 border-indigo-300/50 ${isSelesai ? 'opacity-75' : ''} transition-all duration-300`}
             >
-              <div className="flex-1 min-w-0">
-                <h2 className={`font-bold text-base sm:text-lg ${isSelesai ? 'line-through' : ''} truncate`}>
-                  {task.nama_tugas}
-                </h2>
-                <p className="text-xs text-gray-400 mb-1">
-                  {task.post_timestamp ? new Date(task.post_timestamp).toLocaleString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
-                </p>
-                <p className={`text-gray-600 text-sm ${isSelesai ? 'line-through' : ''} line-clamp-2`}>
-                  <span className="font-semibold">Deskripsi:</span> {task.deskripsi_tugas}
-                </p>
-                <p className={`text-gray-500 text-xs mt-1 ${isSelesai ? 'line-through' : ''} truncate`}>
-                  <span className="font-semibold">Keyword:</span> {task.keyword_tugas && task.keyword_tugas !== 'null' ? task.keyword_tugas : 'Tugas Tanpa Keyword, Tinggalkan saja Komentarmu!'}
-                </p>
-                
-                {/* Actions Row - Point Value, Link Postingan, Detail Tugas berjajar */}
-                <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">                  {/* Point Value Display with Boost Badge */}
-                  {task.point_value && (
-                    <EventBoostTableDisplay
-                      isActive={isEventActive && isInActivePeriod}
-                      boostPercentage={boostPercentage}
-                      pointValue={task.point_value}
-                      originalValue={task.point_value}
-                    />
-                  )}
-                  
-                  {/* Link Postingan */}
-                  {task.link_postingan && (
-                    <a 
-                      href={task.link_postingan}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs underline"
-                    >
-                      <ShareIcon className="w-4 h-4" />
-                      Lihat Postingan
-                    </a>
-                  )}
-                  
-                  {/* Detail Tugas */}
-                  <button 
-                    onClick={() => router.push(`/tugas/${task.id}`)}
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs underline"
-                  >
-                    <EyeIcon className="w-4 h-4" />
-                    Detail Tugas
-                  </button>
-                </div>
-              </div>
-              
-              <div className="flex-shrink-0 w-full lg:w-auto lg:min-w-[200px] flex justify-center lg:justify-end">
-                {renderTaskButton(task)}
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3 lg:gap-6">
+                 {/* Content Wrapper */}
+                 <div className="flex-1 min-w-0 space-y-2">
+                    {/* Header: Title & Time */}
+                    <div className="flex justify-between items-start gap-2">
+                        <h2 className={`font-bold text-sm sm:text-lg text-gray-800 ${isSelesai ? 'line-through text-gray-500' : ''} line-clamp-2`}>
+                          {task.nama_tugas}
+                        </h2>
+                        {/* Mobile-friendly date */}
+                         <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5 bg-gray-50 px-2 py-1 rounded">
+                          {task.post_timestamp ? new Date(task.post_timestamp).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) : ''}
+                        </span>
+                    </div>
+
+                    {/* Description - Compact */}
+                    <p className={`text-gray-600 text-xs sm:text-sm ${isSelesai ? 'line-through' : ''} line-clamp-2 sm:line-clamp-3 leading-relaxed`}>
+                      {task.deskripsi_tugas}
+                    </p>
+
+                    {/* Metadata & Actions */}
+                     <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {/* Point Badge */}
+                        {task.point_value && (
+                            <div className="scale-90 origin-left sm:scale-100">
+                                <EventBoostTableDisplay
+                                  isActive={isEventActive && isInActivePeriod}
+                                  boostPercentage={boostPercentage}
+                                  pointValue={task.point_value}
+                                  originalValue={task.point_value}
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Keyword Badge (if exists) */}
+                        {task.keyword_tugas && task.keyword_tugas !== 'null' && (
+                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700">
+                                KEY: {task.keyword_tugas}
+                             </span>
+                        )}
+
+                        <div className="flex items-center gap-3 ml-auto sm:ml-0">
+                           {/* Link Postingan */}
+                            {task.link_postingan && (
+                                <a 
+                                  href={task.link_postingan}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
+                                  title="Lihat Postingan"
+                                >
+                                  <ShareIcon className="w-4 h-4" />
+                                </a>
+                            )}
+                            
+                            {/* Detail Tugas */}
+                            <button 
+                                onClick={() => router.push(`/tugas/${task.id}`)}
+                                className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
+                                title="Lihat Detail"
+                            >
+                                <EyeIcon className="w-4 h-4" />
+                            </button>
+                        </div>
+                     </div>
+                 </div>
+
+                 {/* Action Button - Full width on mobile, auto on desktop */}
+                 <div className="w-full lg:w-auto lg:min-w-[180px] pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 lg:border-none flex justify-end lg:justify-end items-center">
+                    {renderTaskButton(task)}
+                 </div>
               </div>
             </GlassCard>
           );
