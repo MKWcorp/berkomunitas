@@ -1,40 +1,49 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client';
 
-// Add prisma to the NodeJS global type
-// @ts-ignore
-const globalForPrisma = global
+const globalForPrisma = globalThis;
 
-// Connection pool configuration via environment variables
-// Set these in your .env file:
-// DATABASE_POOL_SIZE=20
-// DATABASE_POOL_TIMEOUT=20
-// DATABASE_IDLE_TIMEOUT=30
+// Add connection_limit to DATABASE_URL if not present
+const getDatabaseUrl = () => {
+  const url = process.env.DATABASE_URL;
+  if (!url) return url;
+  
+  // Parse URL to check if connection_limit exists
+  if (url.includes('connection_limit')) {
+    return url;
+  }
+  
+  // Add connection_limit parameter (10 for development, 5 for production)
+  const limit = process.env.NODE_ENV === 'production' ? 5 : 10;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}connection_limit=${limit}`;
+};
 
 const prisma = globalForPrisma.prisma || new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL,
+      url: getDatabaseUrl(),
     },
   },
-})
+});
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
-// Graceful shutdown
-process.on('beforeExit', async () => {
-  await prisma.$disconnect()
-})
+// Graceful shutdown for production only
+if (process.env.NODE_ENV === 'production') {
+  const gracefulShutdown = async () => {
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      console.error('Error during Prisma disconnect:', error);
+    }
+  };
 
-// Also disconnect on SIGINT and SIGTERM
-process.on('SIGINT', async () => {
-  await prisma.$disconnect()
-  process.exit(0)
-})
+  process.on('beforeExit', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+}
 
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect()
-  process.exit(0)
-})
-
-export default prisma
+export default prisma;

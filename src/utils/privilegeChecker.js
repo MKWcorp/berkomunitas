@@ -1,4 +1,4 @@
-import prisma from '@/utils/prisma';
+import prisma from '@/lib/prisma';
 
 // Definisi hierarki privilege (semakin tinggi angka = semakin tinggi akses)
 const PRIVILEGE_HIERARCHY = {
