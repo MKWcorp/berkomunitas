@@ -121,24 +121,29 @@ export async function GET(request) {
       }
     });
 
-    // Get comment counts for each member
-    const memberStatsWithComments = await Promise.all(
-      memberStats.map(async (member) => {
-        const commentCount = await prisma.comments.count({
-          where: {
-            id_member: member.id
-          }
-        });
+    // Get comment counts for all members in a single query
+    const commentCounts = await prisma.comments.groupBy({
+      by: ['id_member'],
+      _count: {
+        id: true
+      }
+    });
 
-        return {
-          id: member.id,
-          nama_lengkap: member.nama_lengkap,
-          loyalty_point: member.loyalty_point,
-          jumlah_komentar: commentCount,
-          jumlah_tugas_selesai: member._count.task_submissions
-        };
-      })
+    // Create a map for O(1) lookup
+    const commentCountMap = new Map(
+      commentCounts.map(c => [c.id_member, c._count.id])
     );
+
+    // Combine member stats with comment counts
+    const memberStatsWithComments = memberStats.map((member) => {
+      return {
+        id: member.id,
+        nama_lengkap: member.nama_lengkap,
+        loyalty_point: member.loyalty_point,
+        jumlah_komentar: commentCountMap.get(member.id) || 0,
+        jumlah_tugas_selesai: member._count.task_submissions
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -151,8 +156,16 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('Error fetching loyalty point data:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }
