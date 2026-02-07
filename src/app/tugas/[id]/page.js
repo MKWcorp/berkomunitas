@@ -500,7 +500,7 @@ export default function TaskDetailPage() {
             {/* Metadata Grid (Compact) */}
             <div className="flex flex-wrap gap-2 mb-4 text-xs text-gray-600 border-b border-gray-100 pb-3">
                {/* Time */}
-               {task.post_timestamp && (
+               {task.post_timestamp && !isNaN(new Date(task.post_timestamp)) && (
                  <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
                    <ClockIcon className="w-3.5 h-3.5" />
                    <span>{new Date(task.post_timestamp).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: '2-digit'})}</span>
@@ -570,7 +570,7 @@ export default function TaskDetailPage() {
                 <CheckCircleIcon className="w-5 h-5 text-green-600 mt-0.5" />
                 <div>
                     <p className="text-sm font-semibold text-green-800">Tugas Selesai!</p>
-                    {task.completion_timestamp && (
+                    {task.completion_timestamp && !isNaN(new Date(task.completion_timestamp)) && (
                         <p className="text-xs text-green-600 mt-0.5">
                             {new Date(task.completion_timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                         </p>
@@ -617,7 +617,11 @@ export default function TaskDetailPage() {
                                 {member.display_name || 'Member'}
                             </p>
                             <p className="text-[10px] text-gray-500 truncate">
-                                @{member.username || '-'} • <span className="text-green-600">{new Date(member.tanggal_selesai).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</span>
+                                @{member.username || '-'} • <span className="text-green-600">
+                                  {member.tanggal_selesai && !isNaN(new Date(member.tanggal_selesai)) 
+                                    ? new Date(member.tanggal_selesai).toLocaleDateString('id-ID', {day:'numeric', month:'short'})
+                                    : 'Selesai'}
+                                </span>
                             </p>
                         </div>
                         

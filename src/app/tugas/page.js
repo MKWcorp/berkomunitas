@@ -643,7 +643,9 @@ export default function TugasPage() {
                         </h2>
                         {/* Mobile-friendly date */}
                          <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5 bg-gray-50 px-2 py-1 rounded">
-                          {task.post_timestamp ? new Date(task.post_timestamp).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) : ''}
+                          {task.post_timestamp && !isNaN(new Date(task.post_timestamp)) 
+                            ? new Date(task.post_timestamp).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) 
+                            : ''}
                         </span>
                     </div>
 
