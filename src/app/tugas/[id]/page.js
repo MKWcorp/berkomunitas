@@ -563,21 +563,6 @@ export default function TaskDetailPage() {
                 Login untuk mulai mengerjakan
                 </p>
             )}
-            
-            {/* Completion Status Box */}
-            {isCompleted && isSignedIn && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-                <CheckCircleIcon className="w-5 h-5 text-green-600 mt-0.5" />
-                <div>
-                    <p className="text-sm font-semibold text-green-800">Tugas Selesai!</p>
-                    {task.completion_timestamp && !isNaN(new Date(task.completion_timestamp)) && (
-                        <p className="text-xs text-green-600 mt-0.5">
-                            {new Date(task.completion_timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                        </p>
-                    )}
-                </div>
-              </div>
-            )}
           </div>
         </GlassCard>
 
