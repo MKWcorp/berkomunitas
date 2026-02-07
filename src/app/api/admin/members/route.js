@@ -14,9 +14,15 @@ export async function GET(req) {
     select: {
       id: true,
       nama_lengkap: true,
+      email: true, // Email lama (fallback)
       loyalty_point: true,
       nomer_wa: true,
-      user_usernames: { select: { username: true } },
+      user_usernames: { 
+        select: { 
+          username: true,
+          display_name: true 
+        } 
+      },
       profil_sosial_media: {
         select: {
           platform: true,
@@ -37,8 +43,10 @@ export async function GET(req) {
   const mapped = members.map(m => ({
     id: m.id,
     nama_lengkap: m.nama_lengkap,
-    username: m.user_usernames?.username || '',
-    email: m.member_emails?.[0]?.email || '',
+    // Username dari user_usernames table, fallback ke display_name atau ID
+    username: m.user_usernames?.username || m.user_usernames?.display_name || `user${m.id}`,
+    // Prioritas: member_emails (sistem baru) -> email langsung (sistem lama)
+    email: m.member_emails?.[0]?.email || m.email || '',
     poin: m.loyalty_point,
     sosmed: m.profil_sosial_media?.[0]?.platform || '',
     sosmed_username: m.profil_sosial_media?.[0]?.username_sosmed || '',
