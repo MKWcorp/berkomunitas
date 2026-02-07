@@ -10,7 +10,8 @@ export default function AdminModal({
   children,
   maxWidth = 'max-w-md',
   showCloseButton = true,
-  position // New prop: { top, left }
+  position, // New prop: { top, left }
+  closeOnBackdropClick = true // New prop to control backdrop click behavior
 }) {
   const modalRef = useRef(null);
   const [modalStyle, setModalStyle] = useState({});
@@ -78,7 +79,7 @@ export default function AdminModal({
     <div 
       className="fixed inset-0 bg-black/50 backdrop-blur-sm"
       style={{ zIndex: 99998 }}
-      onClick={onClose}
+      onClick={closeOnBackdropClick ? onClose : undefined}
     >
       <div 
         ref={modalRef}

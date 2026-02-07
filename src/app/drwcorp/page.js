@@ -252,7 +252,7 @@ export default function DrwcorpDashboard() {
       <div className="max-w-7xl mx-auto space-y-2">
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
             <div className="flex items-center gap-2">
               <BuildingOfficeIcon className="w-5 h-5 text-blue-600" />
               <h1 className="text-lg font-bold text-gray-800">DRWCorp HR Dashboard</h1>

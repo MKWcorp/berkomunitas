@@ -14,7 +14,7 @@ export default function AutoGlassWrapper({ children }) {
   const shouldApplyGlass = !noGlassRoutes.some(route => pathname.startsWith(route));
 
   // Detect admin routes
-  const isAdminRoute = pathname.startsWith('/admin-app') || pathname.startsWith('/admin');
+  const isAdminRoute = pathname.startsWith('/admin-app');
 
   useEffect(() => {
     // Set body background for public pages (original main branch style)

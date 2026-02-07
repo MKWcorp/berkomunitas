@@ -57,7 +57,7 @@ export async function GET(request) {
       id: member.id,
       nama_lengkap: member.nama_lengkap,
       foto_profil_url: member.foto_profil_url,
-      email: member.member_emails[0]?.email || 'Tidak ada email',
+      email: member.member_emails[0]?.email || member.email || 'Tidak ada email',
       google_id: member.clerk_id,
       tanggal_daftar: member.tanggal_daftar,
       has_social_media: member.profil_sosial_media.length > 0,
@@ -86,7 +86,7 @@ export async function GET(request) {
               id: member.id,
               nama_lengkap: member.nama_lengkap,
               foto_profil_url: member.foto_profil_url,
-              email: member.member_emails[0]?.email || 'Tidak ada email',
+              email: member.member_emails[0]?.email || member.email || 'Tidak ada email',
               google_id: member.clerk_id
             }
           });

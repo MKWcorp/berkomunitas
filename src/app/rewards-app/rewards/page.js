@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSSOUser } from '@/hooks/useSSOUser';
 import { PencilIcon, TrashIcon, PhotoIcon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import GlassCard from '../components/GlassCard';
-import AdminModal from '../../admin/components/AdminModal';
-import ScrollToTopButton from '../../admin/components/ScrollToTopButton';
+import AdminModal from '../../admin-app/components/AdminModal';
+import ScrollToTopButton from '../../admin-app/components/ScrollToTopButton';
 
 export default function RewardsManagementPage() {
   const { user } = useSSOUser();

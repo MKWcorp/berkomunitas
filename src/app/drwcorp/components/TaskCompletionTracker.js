@@ -42,11 +42,12 @@ export default function TaskCompletionTracker({
   return (
     <div className="space-y-3">
       {/* Compact Filters */}
-      <div className="flex flex-wrap gap-2 items-center text-sm">
-        <FunnelIcon className="w-4 h-4 text-gray-500" />
-        
-        {/* Task Search with Autocomplete */}
-        <div className="flex-1 min-w-[250px] relative" ref={searchRef}>
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-start sm:items-center text-sm">
+        <div className="flex w-full sm:w-auto items-center gap-2">
+          <FunnelIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          
+          {/* Task Search with Autocomplete */}
+          <div className="flex-1 min-w-0 sm:min-w-[250px] relative" ref={searchRef}>
           <div className="relative flex gap-1">
             <div className="relative flex-1">
               <MagnifyingGlassIcon className="w-4 h-4 absolute left-2 top-1.5 text-gray-400" />
@@ -105,11 +106,12 @@ export default function TaskCompletionTracker({
             </div>
           )}
         </div>
+        </div>
         
         <select
           value={taskDivisi}
           onChange={(e) => setTaskDivisi(e.target.value)}
-          className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-auto px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">Semua Divisi</option>
           {divisiList.map(divisi => (
@@ -119,9 +121,9 @@ export default function TaskCompletionTracker({
 
         {/* Task Stats Inline */}
         {taskStats && (
-          <>
-            <div className="border-l border-gray-300 h-6"></div>
-            <div className="flex gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+            <div className="hidden sm:block border-l border-gray-300 h-6"></div>
+            <div className="flex gap-3 text-xs w-full sm:w-auto justify-between sm:justify-start">
               <div>
                 <span className="font-semibold text-gray-900">{taskStats.total_employees}</span>
                 <span className="text-gray-600"> Total</span>
@@ -139,7 +141,7 @@ export default function TaskCompletionTracker({
                 <span className="text-gray-600"> Rate</span>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
       

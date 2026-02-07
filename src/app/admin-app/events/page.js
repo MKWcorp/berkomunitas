@@ -134,7 +134,8 @@ function EventModal({ open, onClose, event = null, onSave, onDelete, mode = 'cre
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Setting Value <span className="text-red-500">*</span>
+              Setting Value (%) <span className="text-red-500">*</span>
+              <div className="text-xs text-gray-500 mt-1">Masukkan nilai persentase boost. Contoh: 600 untuk 600% boost</div>
             </label>
             <input
               type="text"

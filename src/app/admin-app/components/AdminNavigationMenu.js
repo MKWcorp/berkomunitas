@@ -54,6 +54,7 @@ export default function AdminNavigationMenu() {
     { href: '/admin-app/tasks', label: 'Tasks', icon: ClipboardDocumentListIcon, signedIn: true },
     { href: '/admin-app/badges', label: 'Badges', icon: StarIcon, signedIn: true },
     { href: '/admin-app/events', label: 'Events', icon: CalendarIcon, signedIn: true },
+    { href: '/admin-app/points', label: 'Monitoring Poin', icon: ChartBarIcon, signedIn: true },
     { href: '/admin-app/loyalty', label: 'Loyalty', icon: CurrencyDollarIcon, signedIn: true },
     { href: '/admin-app/coins', label: 'Coins', icon: CircleStackIcon, signedIn: true },
     { href: '/admin-app/social-media', label: 'Akun', icon: BuildingOfficeIcon, signedIn: true },

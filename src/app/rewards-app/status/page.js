@@ -11,7 +11,7 @@ import {
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import GlassCard from '../components/GlassCard';
-import AdminModal from '../../admin/components/AdminModal';
+import AdminModal from '../../admin-app/components/AdminModal';
 import ShippingTracker from '../../../components/ShippingTracker';
 
 export default function RedemptionStatusPage() {

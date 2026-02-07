@@ -68,7 +68,7 @@ OriginalGlassCard.displayName = 'OriginalGlassCard';
  */
 const GlassCard = forwardRef((props, ref) => {
   const pathname = usePathname();
-  const isAdminRoute = pathname.startsWith('/admin-app') || pathname.startsWith('/admin');
+  const isAdminRoute = pathname.startsWith('/admin-app');
   
   // Use appropriate card based on route
   if (isAdminRoute) {

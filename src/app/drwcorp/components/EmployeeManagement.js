@@ -116,11 +116,12 @@ export default function EmployeeManagement({
   return (
     <div className="space-y-3">
       {/* Compact Filters */}
-      <div className="flex flex-wrap gap-2 items-center text-sm">
-        <FunnelIcon className="w-4 h-4 text-gray-500" />
-        
-        {/* Status Quick Filters */}
-        <div className="flex gap-1">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-start sm:items-center text-sm">
+        <div className="flex w-full sm:w-auto items-center gap-2">
+          <FunnelIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          
+          {/* Status Quick Filters */}
+          <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0 w-full sm:w-auto no-scrollbar">
           <button
             onClick={() => setSelectedStatus('all')}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -133,7 +134,7 @@ export default function EmployeeManagement({
           </button>
           <button
             onClick={() => setSelectedStatus('matched')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
               selectedStatus === 'matched' 
                 ? 'bg-green-600 text-white' 
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -143,7 +144,7 @@ export default function EmployeeManagement({
           </button>
           <button
             onClick={() => setSelectedStatus('ambiguous')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
               selectedStatus === 'ambiguous' 
                 ? 'bg-yellow-600 text-white' 
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -153,7 +154,7 @@ export default function EmployeeManagement({
           </button>
           <button
             onClick={() => setSelectedStatus('unmatched')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
               selectedStatus === 'unmatched' 
                 ? 'bg-red-600 text-white' 
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -162,14 +163,15 @@ export default function EmployeeManagement({
             ✗ Unmatched
           </button>
         </div>
+        </div>
         
-        <div className="border-l border-gray-300 h-6"></div>
+        <div className="hidden sm:block border-l border-gray-300 h-6"></div>
         
         {/* Divisi Filter */}
         <select
           value={selectedDivisi}
           onChange={(e) => setSelectedDivisi(e.target.value)}
-          className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-auto px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">Semua Divisi</option>
           {divisiList.map(divisi => (
@@ -178,7 +180,7 @@ export default function EmployeeManagement({
         </select>
         
         {/* Search */}
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 w-full sm:w-auto sm:min-w-[200px]">
           <div className="relative">
             <MagnifyingGlassIcon className="w-4 h-4 absolute left-2 top-1.5 text-gray-400" />
             <input

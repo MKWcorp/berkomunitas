@@ -13,9 +13,9 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized - No user authenticated' }, { status: 401 });
     }
 
-    // Check if user has admin privileges using clerk_id
+    // Check if user has admin privileges using member_id
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: { google_id: user.id, 
+      where: { member_id: user.id, 
         privilege: 'admin', 
         is_active: true 
       }
@@ -28,7 +28,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ 
         error: 'Forbidden: Admin access required',
         debug: {
-          google_id: user.id,
+          member_id: user.id,
           has_admin_privilege: !!adminPrivilege
         }
       }, { status: 403 });
@@ -166,9 +166,9 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized - No user authenticated' }, { status: 401 });
     }
 
-    // Check if user has admin privileges using clerk_id
+    // Check if user has admin privileges using member_id
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: { google_id: user.id, 
+      where: { member_id: user.id, 
         privilege: 'admin', 
         is_active: true 
       }
@@ -181,7 +181,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ 
         error: 'Forbidden: Admin access required',
         debug: {
-          google_id: user.id,
+          member_id: user.id,
           has_admin_privilege: !!adminPrivilege
         }
       }, { status: 403 });
