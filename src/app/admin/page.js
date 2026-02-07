@@ -13,7 +13,6 @@ import PrivilegesTab from './tabs/PrivilegesTab';
 import PointsTab from './tabs/PointsTab';
 import CrudTab from './tabs/CrudTab';
 import MembersTab from './tabs/MembersTab';
-import FixEmailsTab from './tabs/FixEmailsTab';
 import GeneratePhotosTab from './tabs/GeneratePhotosTab';
 import SocialMediaTab from './tabs/SocialMediaTab';
 
@@ -102,8 +101,6 @@ export default function AdminPage() {
         return <SocialMediaTab />;
       case 'generate-photos':
         return <GeneratePhotosTab />;
-      case 'fix-emails':
-        return <FixEmailsTab />;
       default:
         return <DashboardTab />;
     }

@@ -297,6 +297,7 @@ export default function SocialMediaTab() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('');
+  const [hasMediaFilter, setHasMediaFilter] = useState(null); // null = all, true = has media, false = no media
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSocialMedia, setSelectedSocialMedia] = useState(null);
   const [modalPosition, setModalPosition] = useState(null);
@@ -392,7 +393,9 @@ export default function SocialMediaTab() {
     const matchesPlatform = !selectedPlatform || 
       member.profil_sosial_media?.some(profile => profile.platform === selectedPlatform);
     
-    return matchesSearch && matchesPlatform;
+    const matchesMediaFilter = hasMediaFilter === null || member.has_social_media === hasMediaFilter;
+    
+    return matchesSearch && matchesPlatform && matchesMediaFilter;
   });
 
   // Sort filtered members by name
@@ -435,7 +438,12 @@ export default function SocialMediaTab() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow border">
+        <button
+          onClick={() => setHasMediaFilter(null)}
+          className={`bg-white p-4 rounded-lg shadow border text-left transition-all hover:shadow-md ${
+            hasMediaFilter === null ? 'ring-2 ring-blue-500 border-blue-500' : ''
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Member</p>
@@ -443,8 +451,13 @@ export default function SocialMediaTab() {
             </div>
             <UserIcon className="w-8 h-8 text-blue-600" />
           </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
+        </button>
+        <button
+          onClick={() => setHasMediaFilter(true)}
+          className={`bg-white p-4 rounded-lg shadow border text-left transition-all hover:shadow-md ${
+            hasMediaFilter === true ? 'ring-2 ring-green-500 border-green-500' : ''
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Punya Sosial Media</p>
@@ -454,8 +467,13 @@ export default function SocialMediaTab() {
             </div>
             <GlobeAltIcon className="w-8 h-8 text-green-600" />
           </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
+        </button>
+        <button
+          onClick={() => setHasMediaFilter(false)}
+          className={`bg-white p-4 rounded-lg shadow border text-left transition-all hover:shadow-md ${
+            hasMediaFilter === false ? 'ring-2 ring-red-500 border-red-500' : ''
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Belum Ada Sosial Media</p>
@@ -465,7 +483,7 @@ export default function SocialMediaTab() {
             </div>
             <ExclamationTriangleIcon className="w-8 h-8 text-red-600" />
           </div>
-        </div>
+        </button>
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="flex items-center justify-between">
             <div>

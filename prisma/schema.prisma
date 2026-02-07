@@ -390,7 +390,7 @@ model member_transactions {
   coin_balance_before    Int?
   coin_balance_after     Int?
   created_at             DateTime?         @default(now()) @db.Timestamp(6)
-  members                members           @relation(fields: [member_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  members                members           @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   transaction_types      transaction_types @relation(fields: [transaction_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([created_at(sort: Desc)], map: "idx_member_transactions_created_at")
@@ -541,7 +541,7 @@ model reward_redemptions {
   shipping_cost    Int?      @default(0)
   shipping_method  String?   @default("separate") @db.VarChar(50)
   shipping_notes   String?
-  members          members   @relation(fields: [id_member], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_member")
+  members          members   @relation(fields: [id_member], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_member")
   rewards          rewards   @relation(fields: [id_reward], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reward")
 }
 
@@ -606,7 +606,7 @@ model task_submissions {
   scheduled_check_at                       DateTime? @db.Timestamptz(6)
   gagal_diverifikasi_verification_attempts Int?      @default(0)
   tugas_ai                                 tugas_ai  @relation(fields: [id_task], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_submissions_tugas_ai")
-  members                                  members   @relation(fields: [id_member], references: [id])
+  members                                  members   @relation(fields: [id_member], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([id_member, id_task], map: "unique_member_task")
   @@index([status_submission])

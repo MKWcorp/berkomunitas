@@ -8,7 +8,6 @@ import {
   ClipboardDocumentListIcon,
   ShieldCheckIcon,
   CurrencyDollarIcon,
-  EnvelopeIcon,
   PhotoIcon,
   UsersIcon,
   GlobeAltIcon,
@@ -25,7 +24,6 @@ const TABS = [
   { key: 'points', label: 'Monitoring Poin', icon: CurrencyDollarIcon },  { key: 'members', label: 'Kelola Member', icon: UsersIcon },
   { key: 'social-media', label: 'Profil Sosial Media', icon: GlobeAltIcon },
   { key: 'generate-photos', label: 'Generate Foto', icon: PhotoIcon },
-  { key: 'fix-emails', label: 'Fix Emails', icon: EnvelopeIcon },
 ];
 
 export default function AdminLayout({ children, activeTab, onTabChange }) {
@@ -47,7 +45,7 @@ export default function AdminLayout({ children, activeTab, onTabChange }) {
                 <button
                   key={tab.key}
                   onClick={() => onTabChange(tab.key)}
-                  className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-xl font-medium text-sm transition-all duration-300 ${
+                  className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-xl font-medium text-sm ${
                     activeTab === tab.key
                       ? 'bg-blue-500 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-white/50'

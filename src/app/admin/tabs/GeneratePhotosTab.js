@@ -8,7 +8,6 @@ export default function GeneratePhotosTab() {
   const [options, setOptions] = useState({
     dryRun: true,
     limit: 10,
-    syncFromClerkFirst: true,
     generateForMissingOnly: true
   });
 
@@ -65,19 +64,6 @@ export default function GeneratePhotosTab() {
           <label className="flex items-center space-x-3">
             <input
               type="checkbox"
-              checked={options.syncFromClerkFirst}
-              onChange={(e) => setOptions(prev => ({ ...prev, syncFromClerkFirst: e.target.checked }))}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div className="flex flex-col">
-              <span className="font-medium">📸 Sync from Clerk</span>
-              <span className="text-sm text-gray-600">Coba ambil foto dari Clerk dulu</span>
-            </div>
-          </label>
-
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
               checked={options.generateForMissingOnly}
               onChange={(e) => setOptions(prev => ({ ...prev, generateForMissingOnly: e.target.checked }))}
               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -119,7 +105,7 @@ export default function GeneratePhotosTab() {
 
         <button
           onClick={() => {
-            setOptions({ dryRun: true, limit: 5, syncFromClerkFirst: true, generateForMissingOnly: true });
+            setOptions({ dryRun: true, limit: 5, generateForMissingOnly: true });
             setTimeout(handleGenerate, 100);
           }}
           disabled={loading}
@@ -130,7 +116,7 @@ export default function GeneratePhotosTab() {
         
         <button
           onClick={() => {
-            setOptions({ dryRun: false, limit: 20, syncFromClerkFirst: true, generateForMissingOnly: true });
+            setOptions({ dryRun: false, limit: 20, generateForMissingOnly: true });
             setTimeout(handleGenerate, 100);
           }}
           disabled={loading}
@@ -178,7 +164,7 @@ export default function GeneratePhotosTab() {
             <p><strong>Format:</strong> SVG (scalable)</p>
           </div>
           <div>
-            <p className="mb-2"><strong>Priority:</strong> Clerk photos → Generated avatars</p>
+            <p className="mb-2"><strong>Generation:</strong> Auto-generated avatars</p>
             <p className="mb-2"><strong>Safe Mode:</strong> Limit + Dry run available</p>
             <p><strong>Processing:</strong> Real-time logs</p>
           </div>

@@ -37,31 +37,7 @@ export default function GlassLayout({
 
   return (
     <div className={`min-h-screen ${variants[variant]} relative overflow-hidden ${className}`}>
-      {/* Animated Background Elements */}
-      {showAnimatedBg && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Primary floating orb */}
-          <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-r from-purple-400/20 to-pink-400/20 backdrop-blur-3xl animate-pulse"></div>
-          
-          {/* Secondary floating orb */}
-          <div className="absolute top-1/3 -left-40 w-96 h-96 rounded-full bg-gradient-to-r from-blue-400/20 to-cyan-400/20 backdrop-blur-3xl animate-pulse delay-1000"></div>
-          
-          {/* Tertiary floating orb */}
-          <div className="absolute -bottom-40 right-1/3 w-80 h-80 rounded-full bg-gradient-to-r from-indigo-400/20 to-purple-400/20 backdrop-blur-3xl animate-pulse delay-2000"></div>
-          
-          {/* Additional smaller orbs for more depth */}
-          <div className="absolute top-20 right-1/4 w-40 h-40 rounded-full bg-gradient-to-r from-yellow-400/10 to-orange-400/10 backdrop-blur-2xl animate-bounce delay-500"></div>
-          <div className="absolute bottom-1/4 left-1/4 w-60 h-60 rounded-full bg-gradient-to-r from-green-400/15 to-emerald-400/15 backdrop-blur-2xl animate-pulse delay-3000"></div>
-          
-          {/* Subtle grid pattern overlay */}
-          <div className="absolute inset-0 bg-white/5 backdrop-blur-[0.5px]" 
-               style={{
-                 backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)`,
-                 backgroundSize: '20px 20px'
-               }}>
-          </div>
-        </div>
-      )}
+      {/* Animated Background Elements - DISABLED */}
       
       {/* Main Content Container */}
       <div className={`relative z-10 ${containerClassName}`}>
@@ -101,7 +77,6 @@ export function GlassContainer({
     rounded-${rounded} 
     shadow-${shadow} 
     p-${padding}
-    ${hover ? 'hover:bg-white/15 hover:shadow-3xl transition-all duration-300' : ''}
     ${className}
   `.trim().replace(/\s+/g, ' ');
 
@@ -135,7 +110,7 @@ export function GlassCard({
 
   return (
     <GlassContainer 
-      className={`bg-gradient-to-br ${gradients[gradient]} hover:scale-105 transition-all duration-300 ${className}`}
+      className={`bg-gradient-to-br ${gradients[gradient]} ${className}`}
       {...props}
     >
       {(title || subtitle || Icon) && (

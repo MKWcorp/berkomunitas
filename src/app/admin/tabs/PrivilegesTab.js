@@ -11,7 +11,7 @@ export default function PrivilegesTab() {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
-    google_id: '',
+    email: '',
     privilege: 'user',
     is_active: true
   });
@@ -61,7 +61,7 @@ export default function PrivilegesTab() {
           'x-user-email': user?.email
         },
         body: JSON.stringify({
-          google_id: formData.clerk_id,
+          email: formData.email,
           privilege: formData.privilege,
           is_active: formData.is_active
         })
@@ -126,13 +126,13 @@ export default function PrivilegesTab() {
     setEditingItem(item);
     if (item) {
       setFormData({
-        google_id: item.clerk_id || '',
+        email: item.members?.email || item.members?.member_emails?.[0]?.email || '',
         privilege: item.privilege || 'user',
         is_active: item.is_active !== false
       });
     } else {
       setFormData({
-        google_id: '',
+        email: '',
         privilege: 'user',
         is_active: true
       });
@@ -144,7 +144,7 @@ export default function PrivilegesTab() {
     setShowModal(false);
     setEditingItem(null);
     setFormData({
-      google_id: '',
+      email: '',
       privilege: 'user',
       is_active: true
     });
@@ -273,14 +273,17 @@ export default function PrivilegesTab() {
                     </div>
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">
-                        {item.members?.nama_lengkap || item.clerk_id || 'Unknown User'}
+                        {item.members?.nama_lengkap || (item.member_id ? `Member ID: ${item.member_id}` : item.clerk_id ? `Clerk: ${item.clerk_id.substring(0, 15)}...` : 'Data Tidak Valid')}
                       </div>
+                      {!item.members && item.member_id && (
+                        <div className="text-xs text-red-500">Member tidak ditemukan</div>
+                      )}
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {Array.isArray(item.members?.member_emails) ? (item.members.member_emails[0]?.email || '-') : (typeof item.members?.member_emails === 'string' ? item.members.member_emails : '-')}
+                    {item.members?.email || (Array.isArray(item.members?.member_emails) ? (item.members.member_emails[0]?.email || '-') : (typeof item.members?.member_emails === 'string' ? item.members.member_emails : '-'))}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -341,15 +344,16 @@ export default function PrivilegesTab() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Clerk ID
+              Email
             </label>
             <input
-              type="text"
-              value={formData.clerk_id}
-              onChange={(e) => setFormData({ ...formData, google_id: e.target.value })}
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
-              placeholder="Masukkan Clerk ID user..."
+              disabled={editingItem !== null}
+              placeholder="Masukkan email member..."
             />
           </div>
 

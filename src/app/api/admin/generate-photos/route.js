@@ -14,7 +14,7 @@ const AVATAR_SERVICES = {
 const SELECTED_SERVICE = AVATAR_SERVICES.DICEBEAR_AVATAAARS;
 
 function generateAvatarUrl(member, service = SELECTED_SERVICE) {
-  const seed = member.nama_lengkap || member.clerk_id || `user${member.id}`;
+  const seed = member.nama_lengkap || member.email || `user${member.id}`;
   const encodedSeed = encodeURIComponent(seed.toLowerCase().trim());
   
   switch (service) {
@@ -67,7 +67,6 @@ export async function POST(request) {
     const {
       dryRun = false,
       limit = 10, // Default limit untuk safety
-      syncFromClerkFirst = true,
       generateForMissingOnly = true
     } = body;
 
@@ -80,7 +79,6 @@ export async function POST(request) {
       console.log(message);
     };
 
-    log(`🔧 Sync from Clerk first: ${syncFromClerkFirst}`);
     log(`🎯 Generate for missing only: ${generateForMissingOnly}`);
     log(`🎨 Avatar service: ${SELECTED_SERVICE}`);
     log(`🧪 Dry run: ${dryRun}`);
@@ -119,8 +117,7 @@ export async function POST(request) {
       let newPhotoUrl = null;
       let source = '';
 
-      // For now, skip Clerk sync (can be added later with clerkClient)
-      // Step 1: Generate avatar
+      // Generate avatar
       newPhotoUrl = generateAvatarUrl(member, SELECTED_SERVICE);
       source = 'Generated';
 

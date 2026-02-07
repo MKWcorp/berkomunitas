@@ -194,6 +194,20 @@ export default function MembersTab() {
     return 0;
   });
 
+  function handleSort(column) {
+    if (sortBy === column) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+  }
+
+  function getSortIcon(column) {
+    if (sortBy !== column) return ' ↕';
+    return sortDir === 'asc' ? ' ▲' : ' ▼';
+  }
+
   return (
     <div className="p-6">
       <EditMemberModal
@@ -217,11 +231,36 @@ export default function MembersTab() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">WA</th>
+              <th 
+                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
+                onClick={() => handleSort('id')}
+              >
+                ID{getSortIcon('id')}
+              </th>
+              <th 
+                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
+                onClick={() => handleSort('nama_lengkap')}
+              >
+                Nama{getSortIcon('nama_lengkap')}
+              </th>
+              <th 
+                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
+                onClick={() => handleSort('email')}
+              >
+                Email{getSortIcon('email')}
+              </th>
+              <th 
+                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
+                onClick={() => handleSort('username')}
+              >
+                Username{getSortIcon('username')}
+              </th>
+              <th 
+                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
+                onClick={() => handleSort('nomer_wa')}
+              >
+                WA{getSortIcon('nomer_wa')}
+              </th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
             </tr>
           </thead>
