@@ -193,8 +193,8 @@ export async function POST(request) {
               mode: 'insensitive'
             },
             members: {
-              google_id: {
-                not: user.id
+              NOT: {
+                id: user.id
               }
             }
           },
@@ -328,8 +328,8 @@ export async function PUT(request) {
       const existingByWA = await prisma.members.findFirst({
         where: {
           nomer_wa: nomer_wa,
-          google_id: {
-            not: user.id
+          NOT: {
+            id: user.id
           }
         },
         include: {
