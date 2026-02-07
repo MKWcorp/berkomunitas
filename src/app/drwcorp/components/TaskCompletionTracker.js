@@ -22,7 +22,8 @@ export default function TaskCompletionTracker({
   completedEmployees,
   notCompletedEmployees,
   copyToClipboard,
-  copySuccess
+  copySuccess,
+  loading
 }) {
   const searchRef = useRef(null);
   
@@ -46,23 +47,37 @@ export default function TaskCompletionTracker({
         
         {/* Task Search with Autocomplete */}
         <div className="flex-1 min-w-[250px] relative" ref={searchRef}>
-          <div className="relative">
-            <MagnifyingGlassIcon className="w-4 h-4 absolute left-2 top-1.5 text-gray-400" />
-            <input
-              type="text"
-              value={taskSearchQuery}
-              onChange={(e) => {
-                setTaskSearchQuery(e.target.value);
-                searchTasks(e.target.value);
-              }}
-              onFocus={() => {
-                if (taskSearchResults.length > 0) {
-                  setShowTaskDropdown(true);
-                }
-              }}
-              placeholder="Cari tugas (keyword atau deskripsi)..."
-              className="w-full pl-8 pr-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="relative flex gap-1">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="w-4 h-4 absolute left-2 top-1.5 text-gray-400" />
+              <input
+                type="text"
+                value={taskSearchQuery}
+                onChange={(e) => {
+                  setTaskSearchQuery(e.target.value);
+                  searchTasks(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchTasks(taskSearchQuery);
+                  }
+                }}
+                onFocus={() => {
+                  if (taskSearchResults.length > 0) {
+                    setShowTaskDropdown(true);
+                  }
+                }}
+                placeholder="Ketik ID atau keyword tugas..."
+                className="w-full pl-8 pr-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => searchTasks(taskSearchQuery)}
+              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+            >
+              Cari
+            </button>
           </div>
           
           {/* Autocomplete Dropdown */}
@@ -211,7 +226,8 @@ export default function TaskCompletionTracker({
             </div>
             <button
               onClick={() => copyToClipboard(
-                completionTab === 'completed' ? completedEmployees : notCompletedEmployees
+                completionTab === 'completed' ? completedEmployees : notCompletedEmployees,
+                completionTab
               )}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
             >

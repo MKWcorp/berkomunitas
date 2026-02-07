@@ -97,7 +97,9 @@ export async function GET(request) {
   }
 
   return NextResponse.json(convertBigInt({ 
-    tugas: tasks, 
+    success: true,
+    tugas: tasks,
+    tasks: tasks, // Add this for compatibility
     total: total,
     hasMore: (page * limit) < total
   }));

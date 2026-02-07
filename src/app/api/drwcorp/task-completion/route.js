@@ -8,6 +8,8 @@ export async function GET(request) {
     const taskId = searchParams.get('taskId');
     const divisi = searchParams.get('divisi');
 
+    console.log('[Task Completion API] Request:', { taskId, divisi });
+
     if (!taskId) {
       return NextResponse.json(
         { success: false, error: 'taskId is required' },
@@ -115,6 +117,13 @@ export async function GET(request) {
       matched_employees: employees.filter(e => e.matching_status === 'matched').length,
       unmatched_employees: employees.filter(e => e.matching_status === 'unmatched').length
     };
+
+    console.log('[Task Completion API] Results:', {
+      task_id: task.id,
+      total_employees: employees.length,
+      completed: completed.length,
+      not_completed: notCompleted.length
+    });
 
     return NextResponse.json({
       success: true,

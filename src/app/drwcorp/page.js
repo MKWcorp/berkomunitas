@@ -67,6 +67,8 @@ export default function DrwcorpDashboard() {
     }
     
     try {
+      console.log('[Task Search] Searching for:', query);
+      
       // Check if query is a URL or contains task ID
       const urlPattern = /(?:https?:\/\/)?(?:www\.)?berkomunitas\.com\/tugas\/(\d+)/i;
       const idPattern = /^(\d+)$/;
@@ -79,17 +81,26 @@ export default function DrwcorpDashboard() {
         // Extract ID from URL or use direct ID
         const taskId = urlMatch ? urlMatch[1] : idMatch[1];
         searchQuery = taskId;
+        console.log('[Task Search] Detected task ID:', taskId);
       }
       
-      const response = await fetch(`/api/admin/tugas?q=${encodeURIComponent(searchQuery)}&limit=10`);
+      const url = `/api/admin/tugas?q=${encodeURIComponent(searchQuery)}&limit=10`;
+      console.log('[Task Search] Fetching:', url);
+      
+      const response = await fetch(url);
       const data = await response.json();
+      
+      console.log('[Task Search] Response:', data);
       
       if (data.success) {
         setTaskSearchResults(data.tasks || []);
         setShowTaskDropdown(true);
+        console.log('[Task Search] Found tasks:', data.tasks?.length || 0);
+      } else {
+        console.log('[Task Search] No success:', data.error);
       }
     } catch (error) {
-      console.error('Error searching tasks:', error);
+      console.error('[Task Search] Error:', error);
       setTaskSearchResults([]);
     }
   };
@@ -157,13 +168,44 @@ export default function DrwcorpDashboard() {
   };
 
   // Copy to clipboard
-  const copyToClipboard = (list) => {
-    const text = list.map(emp => {
-      if (emp.member_nama) {
-        return `${emp.nama_lengkap} (${emp.member_nama}) - ${emp.email} - ${emp.divisi}`;
+  const copyToClipboard = (list, tabType) => {
+    // Add title based on tab type
+    let title = '';
+    if (selectedTaskData) {
+      const taskLink = `https://berkomunitas.com/tugas/${selectedTaskData.id}`;
+      if (tabType === 'completed') {
+        title = `Yang Sudah Mengerjakan tugas ${taskLink}\n\n`;
+      } else {
+        title = `Yang belum mengerjakan tugas ${taskLink}\n\n`;
       }
-      return `${emp.nama_lengkap} - ${emp.email} - ${emp.divisi}`;
-    }).join('\n');
+    }
+    
+    // Group by division
+    const grouped = list.reduce((acc, emp) => {
+      const divisi = emp.divisi || 'Tidak ada divisi';
+      if (!acc[divisi]) {
+        acc[divisi] = [];
+      }
+      acc[divisi].push(emp.nama_lengkap);
+      return acc;
+    }, {});
+    
+    // Sort divisions A-Z
+    const sortedDivisions = Object.keys(grouped).sort((a, b) => 
+      a.localeCompare(b, 'id', { sensitivity: 'base' })
+    );
+    
+    // Build text with sorted names in each division
+    const content = sortedDivisions.map(divisi => {
+      // Sort names A-Z
+      const sortedNames = grouped[divisi].sort((a, b) => 
+        a.localeCompare(b, 'id', { sensitivity: 'base' })
+      );
+      
+      return `${divisi}\n\n${sortedNames.join('\n')}`;
+    }).join('\n\n');
+    
+    const text = title + content;
     
     navigator.clipboard.writeText(text);
     setCopySuccess(true);
@@ -270,6 +312,7 @@ export default function DrwcorpDashboard() {
                 notCompletedEmployees={notCompletedEmployees}
                 copyToClipboard={copyToClipboard}
                 copySuccess={copySuccess}
+                loading={loading}
               />
             )}
 
