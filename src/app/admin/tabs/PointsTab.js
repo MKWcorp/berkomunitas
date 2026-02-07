@@ -183,7 +183,7 @@ export default function PointsTab() {
     // Apply search filter
     if (memberStatsSearch) {
       filtered = filtered.filter(member => 
-        member.nama_lengkap.toLowerCase().includes(memberStatsSearch.toLowerCase())
+        member.nama_lengkap?.toLowerCase().includes(memberStatsSearch.toLowerCase())
       );
     }
 
@@ -194,10 +194,14 @@ export default function PointsTab() {
       let bValue = b[field];
 
       // Handle string comparisons
-      if (typeof aValue === 'string') {
+      if (typeof aValue === 'string' && aValue !== null) {
         aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+        bValue = bValue?.toLowerCase() || '';
       }
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
 
       if (direction === 'asc') {
         return aValue > bValue ? 1 : -1;
