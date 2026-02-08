@@ -31,10 +31,17 @@ export async function GET(request) {
       );
     }
 
-    // Get total available tasks (real-time from tugas_ai)
-    const totalTasks = await prisma.tugas_ai.count({
-      where: { status: 'tersedia' }
-    });
+    // Get total available tasks (tugas_ai + tugas_ai_2)
+    const [totalTasksAi, totalTasksAi2] = await Promise.all([
+      prisma.tugas_ai.count({
+        where: { status: 'tersedia' }
+      }),
+      prisma.tugas_ai_2.count({
+        where: { status: 'tersedia' }
+      })
+    ]);
+    
+    const totalTasks = totalTasksAi + totalTasksAi2;
 
     // Get or create completed tasks cache for the member
     let memberStats = await prisma.member_task_stats.findUnique({
@@ -81,9 +88,17 @@ export async function GET(request) {
 
 // Helper function to recalculate completed tasks for a member
 async function recalculateCompletedTasks(memberId) {
-  const stats = await prisma.task_submissions.groupBy({
+  // Count from task_submissions (tugas_ai)
+  const submissionStats = await prisma.task_submissions.groupBy({
     by: ['status_submission'],
     where: { id_member: memberId },
+    _count: { id: true }
+  });
+
+  // Count from tugas_ai_2_screenshots (screenshot tasks)
+  const screenshotStats = await prisma.tugas_ai_2_screenshots.groupBy({
+    by: ['status'],
+    where: { member_id: memberId },
     _count: { id: true }
   });
 
@@ -91,10 +106,28 @@ async function recalculateCompletedTasks(memberId) {
   let pendingTasks = 0;
   let failedTasks = 0;
 
-  stats.forEach(stat => {
+  // From task_submissions
+  submissionStats.forEach(stat => {
     const count = stat._count.id;
     
     switch (stat.status_submission) {
+      case 'selesai':
+        completedTasks += count;
+        break;
+      case 'sedang_verifikasi':
+        pendingTasks += count;
+        break;
+      case 'gagal_diverifikasi':
+        failedTasks += count;
+        break;
+    }
+  });
+
+  // From tugas_ai_2_screenshots
+  screenshotStats.forEach(stat => {
+    const count = stat._count.id;
+    
+    switch (stat.status) {
       case 'selesai':
         completedTasks += count;
         break;
@@ -158,10 +191,17 @@ export async function POST(request) {
     // Force recalculate stats
     await recalculateCompletedTasks(member.id);
 
-    // Get total available tasks (real-time)
-    const totalTasks = await prisma.tugas_ai.count({
-      where: { status: 'tersedia' }
-    });
+    // Get total available tasks (tugas_ai + tugas_ai_2)
+    const [totalTasksAi, totalTasksAi2] = await Promise.all([
+      prisma.tugas_ai.count({
+        where: { status: 'tersedia' }
+      }),
+      prisma.tugas_ai_2.count({
+        where: { status: 'tersedia' }
+      })
+    ]);
+    
+    const totalTasks = totalTasksAi + totalTasksAi2;
 
     // Return updated stats
     const memberStats = await prisma.member_task_stats.findUnique({
@@ -169,12 +209,14 @@ export async function POST(request) {
     });
 
     const completedTasks = memberStats?.completed_tasks || 0;
-    const incompleteTasks = Math.max(0, totalTasks - completedTasks);
+    const verifyingTasks = (memberStats?.pending_tasks || 0) + (memberStats?.failed_tasks || 0);
+    const incompleteTasks = Math.max(0, totalTasks - completedTasks - verifyingTasks);
 
     const stats = {
       total: totalTasks,
       completed: completedTasks,
       incomplete: incompleteTasks,
+      verifying: verifyingTasks,
       pending: memberStats?.pending_tasks || 0,
       failed: memberStats?.failed_tasks || 0,
       lastUpdated: memberStats?.updated_at || new Date()

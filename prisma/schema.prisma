@@ -430,6 +430,7 @@ model members {
   profile_wall_posts_profile_wall_posts_profile_owner_idTomembers profile_wall_posts[]    @relation("profile_wall_posts_profile_owner_idTomembers")
   reward_redemptions                                              reward_redemptions[]
   task_submissions                                                task_submissions[]
+  tugas_ai_2_screenshots                                          tugas_ai_2_screenshots[]
   user_privileges                                                 user_privileges[]
   user_usernames                                                  user_usernames?
   drwcorp_employees                                               drwcorp_employees[]
@@ -639,6 +640,57 @@ model tugas_ai {
   updated_at          DateTime?          @db.Timestamptz(6)
   task_submissions    task_submissions[]
   media               media?             @relation(fields: [media_id], references: [ig_media_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tugas_ai_to_media_final")
+}
+
+model tugas_ai_2 {
+  id                      Int                       @id @default(autoincrement())
+  keyword_tugas           String?                   @db.VarChar(255)
+  deskripsi_tugas         String?
+  link_postingan          String?
+  status                  String                    @default("tersedia") @db.VarChar(50)
+  point_value             Int?                      @default(10)
+  source                  String?                   @db.VarChar(50)
+  verification_rules      Json?
+  post_timestamp          DateTime                  @default(now()) @db.Timestamptz(6)
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                 @db.Timestamptz(6)
+  tugas_ai_2_screenshots  tugas_ai_2_screenshots[]
+
+  @@index([status])
+  @@index([source])
+}
+
+model tugas_ai_2_screenshots {
+  id                       Int        @id @default(autoincrement())
+  tugas_ai_2_id            Int
+  member_id                Int?
+  task_submission_id       Int?
+  screenshot_url           String
+  screenshot_filename      String?    @db.VarChar(255)
+  link_komentar            String?
+  status                   String?    @default("sedang_verifikasi") @db.VarChar(50)
+  uploaded_at              DateTime   @default(now()) @db.Timestamptz(6)
+  verified_at              DateTime?  @db.Timestamptz(6)
+  verification_attempts    Int?       @default(0)
+  ai_extracted_text        String?
+  ai_confidence_score      Float?
+  ai_verification_result   Json?
+  n8n_webhook_id           String?    @db.VarChar(255)
+  n8n_execution_id         String?    @db.VarChar(255)
+  processing_started_at    DateTime?  @db.Timestamptz(6)
+  processing_completed_at  DateTime?  @db.Timestamptz(6)
+  created_at               DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime?  @db.Timestamptz(6)
+  admin_notes              String?
+  tugas_ai_2               tugas_ai_2 @relation(fields: [tugas_ai_2_id], references: [id], onDelete: Cascade)
+  members                  members?   @relation(fields: [member_id], references: [id], onDelete: Cascade)
+
+  @@index([tugas_ai_2_id])
+  @@index([member_id])
+  @@index([tugas_ai_2_id, member_id])
+  @@index([status])
+  @@index([task_submission_id])
+  @@index([n8n_webhook_id])
 }
 
 model user_privileges {

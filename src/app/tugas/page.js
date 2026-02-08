@@ -18,54 +18,14 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/solid';
 import { ShareIcon, EyeIcon } from '@heroicons/react/24/outline';
+import StatCard from '../../components/tugas/StatCard';
+import TaskCard from '../../components/tugas/TaskCard';
 
-// Mapping for dynamic background color by source_profile_link
-const SOURCE_BG_COLORS = {
-  drwskincareshop: 'bg-gray-100',
-  klinikdrwskincarepurworejo: 'bg-gray-100',
-  testimoniidrw: 'bg-gray-100',
-  beautycenterdrw: 'bg-gray-100',
-  beautyprenenurdrw: 'bg-gray-100',
-  klinikdrwskincarekutoarjo: 'bg-gray-100',
-  dzawanikost: 'bg-gray-100',
-  default: 'bg-gray-100',
-};
-
-// Reusable component for displaying task statistics with click functionality
-function StatCard({ title, value, _bgColor = 'bg-white', textColor = 'text-gray-800', onClick, isActive = false, tooltip = null }) {
-  const activeClasses = isActive ? 'ring-2 ring-indigo-500/50 shadow-lg' : '';
-  
-  return (
-    <GlassCard 
-      variant={isActive ? "strong" : "default"}
-      padding="none"
-      className={`text-center cursor-pointer hover:scale-105 transform transition-all duration-300 ${activeClasses} relative group p-3 sm:p-5`}
-      onClick={onClick}
-      hover
-    >
-      <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase truncate">{title}</h3>
-      <p className={`text-lg sm:text-2xl font-bold ${textColor} mt-1`}>{value}</p>
-      {isActive && (
-        <div className="mt-2">
-          <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full"></span>
-        </div>
-      )}
-      {tooltip && (
-        <div className="hidden sm:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-          {tooltip}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-        </div>
-      )}
-    </GlassCard>
-  );
-}
-
-// Helper function for background color
-function _getSourceBgColor(source) {
-  if (!source) {
-    return SOURCE_BG_COLORS.default;
-  }
-  return SOURCE_BG_COLORS[source] || SOURCE_BG_COLORS.default;
+// Helper function for formatting Instagram links
+function formatInstagramLink(link) {
+  if (!link) return link;
+  // Remove trailing slashes and ensure proper format
+  return link.replace(/\/$/, '');
 }
 
 export default function TugasPage() {
@@ -349,6 +309,52 @@ export default function TugasPage() {
     const webhookUrl = `https://n8n.drwapp.com/webhook/2f2cbb08-6065-4afb-b0f9-5c9fcd8d0c97?memberId=${memberId}&taskId=${taskId}`;
     window.open(webhookUrl, '_blank');
   };
+
+  // Handler for task action button (auto-verify tasks)
+  const handleTaskAction = (task) => {
+    if (task.task_type === 'auto') {
+      handleStartTask(task.id);
+    }
+  };
+
+  // Handler for screenshot upload submission
+  const handleScreenshotSubmit = async (formData) => {
+    try {
+      const taskId = formData.get('task_id');
+      const response = await fetch(`/api/tugas/${taskId}/screenshot`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Gagal mengupload screenshot');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Show success message
+        alert('Screenshot berhasil diupload! AI akan memverifikasi dalam 4 jam.');
+        
+        // Refresh tasks and stats
+        await fetchTasks(1);
+        await fetchTaskStats();
+        
+        // Show confetti
+        setShowConfetti(true);
+        if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
+        confettiTimeoutRef.current = setTimeout(() => {
+          setShowConfetti(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Screenshot upload error:', error);
+      throw error; // Re-throw to be handled by form
+    }
+  };
+  
   // Enhanced Countdown Timer with proper timeout API call and responsive design
   const CountdownTimer = ({ deadline, taskId }) => {
     const calculateTimeLeft = useCallback(() => {
@@ -451,63 +457,7 @@ export default function TugasPage() {
     );
   };
   // Task Button
-  const renderTaskButton = (task) => {
-    switch (task.status_submission) {
-      case 'tersedia':
-        return (
-          <ProfileGatedButton 
-            isProfileComplete={isProfileComplete}
-            onClick={() => handleStartTask(task.id)} 
-            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors flex items-center gap-2"
-            tooltip="Lengkapi profil sosial media untuk dapat mengerjakan tugas"
-          >
-            <PlayCircleIcon className="w-4 h-4" />
-            Kerjakan
-          </ProfileGatedButton>
-        );      case 'sedang_verifikasi':
-        return (
-          <div className="w-full max-w-xs mx-auto lg:mx-0">
-            <div className="bg-yellow-100 text-yellow-800 px-3 py-2 rounded-lg border border-yellow-300 mb-2">
-              <div className="flex items-center justify-center gap-2">
-                <ClockIcon className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium text-xs sm:text-sm whitespace-nowrap">Sedang Verifikasi</span>
-              </div>
-            </div>
-            <CountdownTimer deadline={task.batas_waktu} taskId={task.id} />
-          </div>
-        );case 'selesai':
-        return (
-          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 max-w-full">
-            <div className="flex items-center gap-1 text-green-600 font-semibold">
-              <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              <span className="text-xs sm:text-sm whitespace-nowrap">Selesai</span>
-            </div>            {task.point_value && (
-              <EventBoostInlineDisplay
-                isActive={isEventActive && isInActivePeriod}
-                boostPercentage={boostPercentage}
-                pointValue={task.point_value}
-                originalValue={task.point_value}
-              />
-            )}
-          </div>
-        );
-      case 'gagal_diverifikasi':
-        return (
-          <ProfileGatedButton 
-            isProfileComplete={isProfileComplete}
-            onClick={() => handleStartTask(task.id)} 
-            className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 transition-colors flex items-center gap-2"
-            tooltip="Lengkapi profil sosial media untuk dapat mencoba lagi"
-          >
-            <ArrowPathIcon className="w-4 h-4" />
-            Coba Lagi
-          </ProfileGatedButton>
-        );
-      default:
-        return null;
-    }
-  };
-
+  
   if (loading) return <div className="text-center p-10">Memuat tugas...</div>;
   if (error && !tasks.length) return <div className="text-center p-10 text-red-500">Error: {error}</div>;
   if (!memberId && !loading) return <div className="text-center p-10">Member tidak ditemukan. Mohon lengkapi profil Anda.</div>;
@@ -623,92 +573,23 @@ export default function TugasPage() {
           <div className="text-xs sm:text-sm text-gray-500 mb-2">
             Menampilkan {filteredTasks.length} tugas
           </div>
-        )}        {filteredTasks.map((task, index) => {
-          const isSelesai = task.status_submission === 'selesai';
-          return (
-            <GlassCard 
-              ref={filteredTasks.length === index + 1 ? lastTaskElementRef : undefined} 
-              key={`task-${task.id}`}
-              variant={isSelesai ? "subtle" : "default"}
-              padding="none"
-              className={`flex flex-col gap-3 p-4 sm:p-6 lg:p-8 border-l-4 border-indigo-300/50 ${isSelesai ? 'opacity-75' : ''} transition-all duration-300`}
-            >
-              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3 lg:gap-6">
-                 {/* Content Wrapper */}
-                 <div className="flex-1 min-w-0 space-y-2">
-                    {/* Header: Title & Time */}
-                    <div className="flex justify-between items-start gap-2">
-                        <h2 className={`font-bold text-sm sm:text-lg text-gray-800 ${isSelesai ? 'line-through text-gray-500' : ''} line-clamp-2`}>
-                          {task.nama_tugas}
-                        </h2>
-                        {/* Mobile-friendly date */}
-                         <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5 bg-gray-50 px-2 py-1 rounded">
-                          {task.post_timestamp && !isNaN(new Date(task.post_timestamp)) 
-                            ? new Date(task.post_timestamp).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) 
-                            : ''}
-                        </span>
-                    </div>
-
-                    {/* Description - Compact */}
-                    <p className={`text-gray-600 text-xs sm:text-sm ${isSelesai ? 'line-through' : ''} line-clamp-2 sm:line-clamp-3 leading-relaxed`}>
-                      {task.deskripsi_tugas}
-                    </p>
-
-                    {/* Metadata & Actions */}
-                     <div className="flex flex-wrap items-center gap-2 mt-1">
-                        {/* Point Badge */}
-                        {task.point_value && (
-                            <div className="scale-90 origin-left sm:scale-100">
-                                <EventBoostTableDisplay
-                                  isActive={isEventActive && isInActivePeriod}
-                                  boostPercentage={boostPercentage}
-                                  pointValue={task.point_value}
-                                  originalValue={task.point_value}
-                                />
-                            </div>
-                        )}
-                        
-                        {/* Keyword Badge (if exists) */}
-                        {task.keyword_tugas && task.keyword_tugas !== 'null' && (
-                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700">
-                                KEY: {task.keyword_tugas}
-                             </span>
-                        )}
-
-                        <div className="flex items-center gap-3 ml-auto sm:ml-0">
-                           {/* Link Postingan */}
-                            {task.link_postingan && (
-                                <a 
-                                  href={task.link_postingan}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                                  title="Lihat Postingan"
-                                >
-                                  <ShareIcon className="w-4 h-4" />
-                                </a>
-                            )}
-                            
-                            {/* Detail Tugas */}
-                            <button 
-                                onClick={() => router.push(`/tugas/${task.id}`)}
-                                className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                                title="Lihat Detail"
-                            >
-                                <EyeIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-                     </div>
-                 </div>
-
-                 {/* Action Button - Full width on mobile, auto on desktop */}
-                 <div className="w-full lg:w-auto lg:min-w-[180px] pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 lg:border-none flex justify-end lg:justify-end items-center">
-                    {renderTaskButton(task)}
-                 </div>
-              </div>
-            </GlassCard>
-          );
-        })}
+        )}        {filteredTasks.map((task, index) => (
+          <div 
+            ref={filteredTasks.length === index + 1 ? lastTaskElementRef : undefined} 
+            key={`${task.task_type}-${task.id}`}
+          >
+            <TaskCard
+              task={task}
+              isProfileComplete={isProfileComplete}
+              activeEvents={activeEvents}
+              highestBoostEvent={highestBoostEvent}
+              onTaskAction={handleTaskAction}
+              onScreenshotSubmit={handleScreenshotSubmit}
+              formatInstagramLink={formatInstagramLink}
+              router={router}
+            />
+          </div>
+        ))}
         {loadingMore && <div className="text-center p-4">Memuat lebih banyak tugas...</div>}
         {!hasMore && filteredTasks.length > 0 && (
           <div className="text-center p-4 text-gray-500">Anda telah mencapai akhir daftar.</div>

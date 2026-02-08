@@ -106,16 +106,76 @@ export async function GET(request) {
       };
     }
 
-    // Fetch tasks with conditional inclusion of submissions for the specific member
-    const tasksFromDb = await prisma.tugas_ai.findMany({
-      where: whereClause,
-      include: includeFilter,
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy: {
-        post_timestamp: 'desc',
-      },
-    });
+    // Fetch tasks from both tables
+    const [tasksAiFromDb, tasksAi2FromDb] = await Promise.all([
+      // tugas_ai (auto-verify tasks)
+      prisma.tugas_ai.findMany({
+        where: whereClause,
+        include: includeFilter,
+        orderBy: {
+          post_timestamp: 'desc',
+        },
+      }),
+      // tugas_ai_2 (screenshot tasks)
+      prisma.tugas_ai_2.findMany({
+        where: {
+          status: 'tersedia',
+          ...(search && {
+            deskripsi_tugas: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          }),
+        },
+        select: {
+          id: true,
+          keyword_tugas: true,
+          deskripsi_tugas: true,
+          link_postingan: true,
+          status: true,
+          point_value: true,
+          source: true,
+          verification_rules: true,
+          post_timestamp: true,
+          created_at: true,
+          updated_at: true,
+          tugas_ai_2_screenshots: {
+            where: {
+              member_id: memberId,
+            },
+            orderBy: {
+              uploaded_at: 'desc',
+            },
+            take: 1,
+          },
+        },
+        orderBy: {
+          post_timestamp: 'desc',
+        },
+      }),
+    ]);
+
+    // Collect all task_submission_ids from screenshots
+    const taskSubmissionIds = tasksAi2FromDb
+      .flatMap(task => task.tugas_ai_2_screenshots)
+      .map(s => s.task_submission_id)
+      .filter(id => id != null);
+
+    // Query task_submissions for these IDs that belong to current user
+    const userTaskSubmissions = taskSubmissionIds.length > 0 
+      ? await prisma.task_submissions.findMany({
+          where: {
+            id: { in: taskSubmissionIds },
+            id_member: memberId,
+          },
+          select: {
+            id: true,
+            id_task: true,
+            status_submission: true,
+            waktu_klik: true,
+          },
+        })
+      : [];
 
     // Helper function to convert BigInt fields in an object
     const convertBigIntsInObject = (obj) => {
@@ -130,32 +190,103 @@ export async function GET(request) {
         return newObj;
     };
 
-    // Process tasks to add status and deadline, and convert BigInts
-    const tasks = tasksFromDb.map(task => {
+    // Process tugas_ai (auto-verify) tasks
+    const processedTasksAi = tasksAiFromDb.map(task => {
       const submission = task.task_submissions[0];
       const status_submission = submission ? submission.status_submission : 'tersedia';
 
       let batas_waktu = null;
       if (status_submission === 'sedang_verifikasi' && submission?.waktu_klik) {
         const waktuKlik = new Date(submission.waktu_klik);
-        waktuKlik.setHours(waktuKlik.getHours() + 4); // Changed to 4 hours
+        waktuKlik.setHours(waktuKlik.getHours() + 4);
         batas_waktu = waktuKlik.toISOString();
       }
 
-      // Clean up the response object
       const { task_submissions, ...restOfTask } = task;
 
       const processedTask = {
         ...restOfTask,
+        task_type: 'auto',
         status_submission,
         batas_waktu,
       };
 
-      // Convert any BigInts in the final task object
       return convertBigIntsInObject(processedTask);
     });
-      // Get total count for pagination metadata (using same filter conditions)
-    const totalTasks = await prisma.tugas_ai.count({ where: whereClause });
+
+    // Process tugas_ai_2 (screenshot) tasks
+    const processedTasksAi2 = tasksAi2FromDb.map(task => {
+      // Find screenshot from this user by member_id (already filtered in query)
+      const userScreenshot = task.tugas_ai_2_screenshots[0];
+      
+      // Determine status based on screenshot status field
+      let status_submission = 'tersedia';
+      
+      if (userScreenshot) {
+        // Map screenshot status to task status
+        switch (userScreenshot.status) {
+          case 'sedang_verifikasi':
+            status_submission = 'sedang_verifikasi';
+            break;
+          case 'selesai':
+            status_submission = 'selesai';
+            break;
+          case 'gagal_diverifikasi':
+            status_submission = 'gagal_diverifikasi';
+            break;
+          default:
+            status_submission = 'sedang_verifikasi';
+        }
+      }
+
+      let batas_waktu = null;
+      if (status_submission === 'sedang_verifikasi' && userScreenshot?.uploaded_at) {
+        const uploadTime = new Date(userScreenshot.uploaded_at);
+        uploadTime.setHours(uploadTime.getHours() + 4);
+        batas_waktu = uploadTime.toISOString();
+      }
+
+      const { tugas_ai_2_screenshots, ...restOfTask } = task;
+
+      const processedTask = {
+        ...restOfTask,
+        task_type: 'screenshot',
+        status_submission,
+        batas_waktu,
+        screenshot_data: userScreenshot ? {
+          id: userScreenshot.id,
+          url: userScreenshot.screenshot_url,
+          uploaded_at: userScreenshot.uploaded_at,
+          status: userScreenshot.status,
+        } : null,
+      };
+
+      return convertBigIntsInObject(processedTask);
+    });
+
+    // Combine both task types
+    let allTasks = [...processedTasksAi, ...processedTasksAi2];
+    
+    // Sort by post_timestamp descending
+    allTasks.sort((a, b) => new Date(b.post_timestamp) - new Date(a.post_timestamp));
+    
+    // Apply client-side filter for combined tasks from both tables
+    if (filter === 'selesai') {
+      allTasks = allTasks.filter(t => t.status_submission === 'selesai');
+    } else if (filter === 'belum') {
+      allTasks = allTasks.filter(t => t.status_submission === 'tersedia' || t.status_submission === 'gagal_diverifikasi');
+    } else if (filter === 'verifikasi') {
+      // Include tasks being verified (from both task_submissions and tugas_ai_2_screenshots)
+      allTasks = allTasks.filter(t => t.status_submission === 'sedang_verifikasi' || t.status_submission === 'gagal_diverifikasi');
+    } else if (filter === 'gagal') {
+      allTasks = allTasks.filter(t => t.status_submission === 'gagal_diverifikasi');
+    }
+    
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const tasks = allTasks.slice(startIndex, endIndex);
+    const totalTasks = allTasks.length;
 
     return NextResponse.json({
       success: true,

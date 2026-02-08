@@ -163,6 +163,16 @@ export default function UserProfileDropdown() {
               Profil Saya
             </Link>
 
+            {/* Admin Menu - Visible to all, access checked at route */}
+            <Link
+              href="/admin-app"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-white/40 rounded-xl transition-colors"
+            >
+              <ShieldCheckIcon className="w-5 h-5 mr-3 text-red-500" />
+              Admin Panel
+            </Link>
+
             <Link
               href={getBerkomunitasPlusHref()}
               onClick={() => setIsOpen(false)}

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/ssoAuth';
-import { createNewTaskNotification } from '../../../../../lib/taskNotifications';
 
 export async function GET(request) {
   try {
@@ -13,7 +12,8 @@ export async function GET(request) {
     
     // Check if user has admin privilege using user_privileges table
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: { member_id: user.id,
+      where: { 
+        member_id: user.id,
         privilege: 'admin',
         is_active: true,
         OR: [
@@ -36,14 +36,11 @@ export async function GET(request) {
     let whereClause = {};
   
     if (search.trim()) {
-      // Check if search is a number (for ID search)
       const isNumeric = /^\d+$/.test(search.trim());
       
       if (isNumeric) {
-        // Search by ID
         whereClause.id = parseInt(search.trim());
       } else {
-        // Search by text fields using OR condition
         whereClause.OR = [
           {
             keyword_tugas: {
@@ -66,75 +63,56 @@ export async function GET(request) {
         ];
       }
     }
-    
-    // Fetch from both tables
-    const [tasksAi, tasksAi2, totalAi, totalAi2] = await Promise.all([
-      prisma.tugas_ai.findMany({ 
-        where: whereClause,
-        orderBy: { post_timestamp: 'desc' } 
-      }),
+
+    const [tasks, total] = await Promise.all([
       prisma.tugas_ai_2.findMany({ 
         where: whereClause,
+        skip: (page - 1) * limit, 
+        take: limit, 
         orderBy: { post_timestamp: 'desc' },
         include: {
           tugas_ai_2_screenshots: {
             select: {
               id: true,
-              screenshot_url: true
+              screenshot_url: true,
+              uploaded_at: true,
+              ai_verification_result: true
             }
           }
         }
       }),
-      prisma.tugas_ai.count({ where: whereClause }),
       prisma.tugas_ai_2.count({ where: whereClause })
     ]);
-    
-    // Combine and add task_type field
-    const combinedTasks = [
-      ...tasksAi.map(task => ({ ...task, task_type: 'auto' })),
-      ...tasksAi2.map(task => ({ ...task, task_type: 'screenshot' }))
-    ];
-    
-    // Sort combined results by post_timestamp
-    combinedTasks.sort((a, b) => new Date(b.post_timestamp) - new Date(a.post_timestamp));
-    
-    // Apply pagination to combined results
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedTasks = combinedTasks.slice(startIndex, endIndex);
-    
-    const totalCombined = totalAi + totalAi2;
 
-  function convertBigInt(obj) {
-    if (Array.isArray(obj)) return obj.map(convertBigInt);
-    if (obj && typeof obj === 'object') {
-      // Handle Date objects
-      if (obj instanceof Date) return obj.toISOString();
-      
-      const out = {};
-      for (const k in obj) {
-        if (typeof obj[k] === 'bigint') {
-          out[k] = Number(obj[k]);
-        } else if (obj[k] instanceof Date) {
-          out[k] = obj[k].toISOString();
-        } else {
-          out[k] = convertBigInt(obj[k]);
+    function convertBigInt(obj) {
+      if (Array.isArray(obj)) return obj.map(convertBigInt);
+      if (obj && typeof obj === 'object') {
+        if (obj instanceof Date) return obj.toISOString();
+        
+        const out = {};
+        for (const k in obj) {
+          if (typeof obj[k] === 'bigint') {
+            out[k] = Number(obj[k]);
+          } else if (obj[k] instanceof Date) {
+            out[k] = obj[k].toISOString();
+          } else {
+            out[k] = convertBigInt(obj[k]);
+          }
         }
+        return out;
       }
-      return out;
+      return obj;
     }
-    return obj;
-  }
 
-  return NextResponse.json(convertBigInt({ 
-    success: true,
-    tugas: paginatedTasks,
-    tasks: paginatedTasks, // Add this for compatibility
-    total: totalCombined,
-    hasMore: endIndex < totalCombined
-  }));
+    return NextResponse.json(convertBigInt({ 
+      success: true,
+      tugas: tasks,
+      tasks: tasks,
+      total: total,
+      hasMore: (page * limit) < total
+    }));
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    console.error('Error fetching tugas AI 2:', error);
     return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
   }
 }
@@ -147,9 +125,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // Check if user has admin privilege using user_privileges table
+    // Check if user has admin privilege
     const adminPrivilege = await prisma.user_privileges.findFirst({
-      where: { member_id: user.id,
+      where: { 
+        member_id: user.id,
         privilege: 'admin',
         is_active: true,
         OR: [
@@ -173,41 +152,61 @@ export async function POST(request) {
       }, { status: 400 });
     }
     
+    // Prepare task data for tugas_ai_2
     const taskData = {
       keyword_tugas: body.keyword_tugas,
       deskripsi_tugas: body.deskripsi_tugas,
       link_postingan: body.link_postingan,
       status: body.status || 'tersedia',
-      point_value: pointValue
+      point_value: pointValue,
+      source: body.source || 'manual', // Default to 'manual' for admin-created tasks
+      verification_rules: body.verification_rules || {
+        required_keywords: [],
+        min_confidence: 0.7,
+        check_screenshot: true
+      }
     };
     
-    const data = await prisma.tugas_ai.create({ data: taskData });
+    // Create task in tugas_ai_2 table
+    const data = await prisma.tugas_ai_2.create({ 
+      data: taskData,
+      include: {
+        tugas_ai_2_screenshots: true
+      }
+    });
     
-    // Create notifications for all active members when new task is created
-    if (data.status === 'tersedia') {
-      const activeMembers = await prisma.members.findMany({
-        where: { google_id: { not: null }, // Only members who have registered
-          status: { not: 'banned' } // Exclude banned members
-        },
-        select: { id: true }
-      });
-      
-      await createNewTaskNotification(data, activeMembers);
-    }
+    // TODO: Create notifications for all active members when new task is created
+    // We can implement this later when we have the notification system for tugas_ai_2
     
     function convertBigInt(obj) {
       if (Array.isArray(obj)) return obj.map(convertBigInt);
       if (obj && typeof obj === 'object') {
+        if (obj instanceof Date) return obj.toISOString();
+        
         const out = {};
-        for (const k in obj) out[k] = typeof obj[k] === 'bigint' ? Number(obj[k]) : convertBigInt(obj[k]);
+        for (const k in obj) {
+          if (typeof obj[k] === 'bigint') {
+            out[k] = Number(obj[k]);
+          } else if (obj[k] instanceof Date) {
+            out[k] = obj[k].toISOString();
+          } else {
+            out[k] = convertBigInt(obj[k]);
+          }
+        }
         return out;
       }
       return obj;
     }
     
-    return NextResponse.json(convertBigInt(data));
+    return NextResponse.json(convertBigInt({
+      success: true,
+      data
+    }));
   } catch (error) {
-    console.error('Error creating task:', error);
-    return NextResponse.json({ error: 'Gagal membuat tugas' }, { status: 500 });
+    console.error('Error creating tugas AI 2:', error);
+    return NextResponse.json({ 
+      error: 'Gagal membuat tugas screenshot',
+      details: error.message 
+    }, { status: 500 });
   }
 }

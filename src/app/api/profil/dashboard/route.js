@@ -72,7 +72,8 @@ export async function GET(request) {
       badges,
       notifications,
       pointHistory,
-      levels
+      levels,
+      privileges
     ] = await Promise.all([
       prisma.profil_sosial_media.findMany({ where: { id_member: memberId } }).catch(() => []),
       prisma.member_badges.findMany({
@@ -103,6 +104,12 @@ export async function GET(request) {
         take: 10,
       }).catch(() => []),
       prisma.levels.findMany({ orderBy: { level_number: 'asc' } }).catch(() => []),
+      prisma.user_privileges.findMany({
+        where: {
+          member_id: memberId,
+          is_active: true
+        }
+      }).catch(() => []),
     ]);
 
     // Calculate current level and next level info with null safety
@@ -154,6 +161,7 @@ export async function GET(request) {
         member: memberData,
         socialProfiles: socialProfiles || [],
         badges: (badges || []).map(b => ({
+        privileges: privileges || [],
           id: b.id,
           badge_name: b.badges?.badge_name || 'Unknown Badge',
           description: b.badges?.description || '',

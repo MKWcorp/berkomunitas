@@ -2,11 +2,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSSOUser } from '@/hooks/useSSOUser';
 import { useRouter } from 'next/navigation';
-import { PencilIcon, TrashIcon, PlusIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, CameraIcon, BoltIcon } from '@heroicons/react/24/outline';
 import AdminLayout from '../components/AdminLayout';
-import AdminModal from '../components/AdminModal';
 import ScrollToTopButton from '../components/ScrollToTopButton';
-import { GlassContainer, GlassCard, GlassButton } from '@/components/GlassLayout';
+import { GlassContainer, GlassCard } from '@/components/GlassLayout';
 import { useResponsive, useGlassEffects } from '@/hooks/useGlassTheme';
 
 export default function TasksPage() {
@@ -20,16 +19,6 @@ export default function TasksPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
-  const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [modalPosition, setModalPosition] = useState(null);
-  const [formData, setFormData] = useState({
-    keyword_tugas: '',
-    deskripsi_tugas: '',
-    link_postingan: '',
-    point_value: '',
-    status: 'tersedia'
-  });
   const [sortConfig, setSortConfig] = useState({ key: 'post_timestamp', direction: 'desc' });
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -147,71 +136,35 @@ export default function TasksPage() {
     if (node) observer.current.observe(node);
   }, [loading, hasMore]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Validate point_value before sending
-    const pointValue = Number(formData.point_value);
-    if (isNaN(pointValue) || pointValue < 1 || pointValue > 2147483647) {
-      alert('Point value must be between 1 and 2,147,483,647');
-      return;
-    }
-    
-    try {
-      const url = editingItem ? `/api/admin/tugas/${editingItem.id}` : '/api/admin/tugas';
-      const method = editingItem ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        setItems([]);
-        setPage(1);
-        setHasMore(true);
-        fetchItems(1);
-        fetchStats();
-        closeModal();
-      } else {
-        alert(result.error || 'Error saving task');
-      }
-    } catch (error) {
-      console.error('Error saving task:', error);
-      alert('Error saving task');
-    }
-  };
 
-  const handleDelete = async (id, forceDelete = false) => {
-    const confirmMessage = forceDelete 
-      ? 'Yakin ingin menghapus tugas ini BESERTA SEMUA SUBMISSION terkait? Tindakan ini tidak dapat dibatalkan!' 
-      : 'Yakin ingin menghapus tugas ini?';
+
+  const handleDelete = async (item) => {
+    const taskType = item.task_type || 'auto';
+    const taskTypeLabel = taskType === 'screenshot' ? 'screenshot' : 'auto-verify';
+    
+    const confirmMessage = `Yakin ingin menghapus tugas ${taskTypeLabel} ini? ${taskType === 'screenshot' ? 'Semua screenshot dan submission terkait akan ikut terhapus (CASCADE).' : 'Semua submission terkait akan ikut terhapus.'}`;
       
     if (!confirm(confirmMessage)) return;
     
     try {
-      const url = forceDelete ? `/api/admin/tugas/${id}?force=true` : `/api/admin/tugas/${id}`;
-      const response = await fetch(url, {
+      // Use different endpoints based on task type
+      const endpoint = taskType === 'screenshot' 
+        ? `/api/admin/tugas-ai-2/${item.id}` 
+        : `/api/admin/tugas/${item.id}?force=true`;
+        
+      const response = await fetch(endpoint, {
         method: 'DELETE'
       });
       
       const result = await response.json();
       
       if (response.ok) {
+        alert('✅ Tugas berhasil dihapus!');
         setItems([]);
         setPage(1);
         setHasMore(true);
         fetchItems(1);
         fetchStats();
-      } else if (result.hasSubmissions && !forceDelete) {
-        if (confirm('Tugas ini memiliki submission. Yakin ingin menghapus beserta semua submission?')) {
-          handleDelete(id, true);
-        }
       } else {
         alert(result.error || 'Error deleting task');
       }
@@ -221,46 +174,14 @@ export default function TasksPage() {
     }
   };
 
-  const handleEdit = (item, event) => {
-    const rect = event.target.getBoundingClientRect();
-    setModalPosition({
-      top: rect.bottom + window.scrollY + 10,
-      left: rect.left + window.scrollX
-    });
+  const handleEdit = (item) => {
+    const taskType = item.task_type || 'auto';
     
-    setEditingItem(item);
-    setFormData({
-      keyword_tugas: item.keyword_tugas || '',
-      deskripsi_tugas: item.deskripsi_tugas || '',
-      link_postingan: item.link_postingan || '',
-      point_value: item.point_value?.toString() || '',
-      status: item.status || 'tersedia'
-    });
-    setShowModal(true);
-  };
-
-  const handleAdd = (event) => {
-    const rect = event.target.getBoundingClientRect();
-    setModalPosition({
-      top: rect.bottom + window.scrollY + 10,
-      left: rect.left + window.scrollX
-    });
-    
-    setEditingItem(null);
-    setFormData({
-      keyword_tugas: '',
-      deskripsi_tugas: '',
-      link_postingan: '',
-      point_value: '',
-      status: 'tersedia'
-    });
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setEditingItem(null);
-    setModalPosition(null);
+    if (taskType === 'screenshot') {
+      router.push(`/admin-app/edit-task-screenshot/${item.id}`);
+    } else {
+      router.push(`/admin-app/edit-task/${item.id}`);
+    }
   };
 
   const handleSearch = () => {
@@ -353,14 +274,6 @@ export default function TasksPage() {
                 <MagnifyingGlassIcon className="h-4 w-4" />
               </button>
             </div>
-            <GlassButton
-              onClick={handleAdd}
-              variant="primary"
-              className="flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
-            >
-              <PlusIcon className="h-4 w-4" />
-              Tambah Tugas
-            </GlassButton>
           </div>
         </div>
       </GlassContainer>
@@ -397,8 +310,8 @@ export default function TasksPage() {
                     <th className="text-left py-3 px-2 font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('id')}>
                       ID {sortConfig.key === 'id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="text-left py-3 px-2 font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('keyword_tugas')}>
-                      Keyword {sortConfig.key === 'keyword_tugas' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <th className="text-center py-3 px-2 font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors w-16" onClick={() => handleSort('task_type')} title="Tipe Task">
+                      {sortConfig.key === 'task_type' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th className="text-left py-3 px-2 font-semibold text-gray-800">Deskripsi</th>
                     <th className="text-left py-3 px-2 font-semibold text-gray-800">Link</th>
@@ -417,14 +330,22 @@ export default function TasksPage() {
                 <tbody>
                   {sortedItems.map((item, index) => (
                     <tr 
-                      key={item.id} 
+                      key={`${item.task_type || 'auto'}-${item.id}`} 
                       className="border-b border-white/10 hover:bg-white/10 transition-colors"
                       ref={index === sortedItems.length - 1 ? lastItemElementRef : null}
                     >
                       <td className="py-3 px-2 text-sm text-gray-700 font-mono">#{item.id}</td>
-                      <td className="py-3 px-2 text-sm text-gray-800 font-medium max-w-[200px]">
-                        <div className="truncate" title={item.keyword_tugas}>
-                          {item.keyword_tugas || '-'}
+                      <td className="py-3 px-2 text-center">
+                        <div className={`inline-flex items-center justify-center w-8 h-8 rounded-lg ${
+                          item.task_type === 'screenshot' 
+                            ? 'bg-purple-100' 
+                            : 'bg-blue-100'
+                        }`} title={item.task_type === 'screenshot' ? 'Screenshot Task' : 'Auto-Verify Task'}>
+                          {item.task_type === 'screenshot' ? (
+                            <CameraIcon className="w-5 h-5 text-purple-700" />
+                          ) : (
+                            <BoltIcon className="w-5 h-5 text-blue-700" />
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-2 text-sm text-gray-600 max-w-[200px]">
@@ -467,14 +388,14 @@ export default function TasksPage() {
                       <td className="py-3 px-2">
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={(e) => handleEdit(item, e)}
+                            onClick={() => handleEdit(item)}
                             className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                             title="Edit Tugas"
                           >
                             <PencilIcon className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleDelete(item)}
                             className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                             title="Hapus Tugas"
                           >
@@ -501,107 +422,6 @@ export default function TasksPage() {
           )}
         </div>
       </GlassContainer>
-
-      {/* Modal */}
-      <AdminModal
-        isOpen={showModal}
-        onClose={closeModal}
-        title={editingItem ? 'Edit Tugas' : 'Tambah Tugas Baru'}
-        maxWidth="max-w-md"
-        position={modalPosition}
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Keyword Tugas
-            </label>
-            <input
-              type="text"
-              value={formData.keyword_tugas}
-              onChange={(e) => setFormData({ ...formData, keyword_tugas: e.target.value })}
-              className="w-full px-4 py-3 backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-              required
-              placeholder="Masukkan keyword tugas..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Deskripsi Tugas
-            </label>
-            <textarea
-              value={formData.deskripsi_tugas}
-              onChange={(e) => setFormData({ ...formData, deskripsi_tugas: e.target.value })}
-              className="w-full px-4 py-3 backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-              rows="3"
-              placeholder="Deskripsi tugas..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Link Postingan
-            </label>
-            <input
-              type="url"
-              value={formData.link_postingan}
-              onChange={(e) => setFormData({ ...formData, link_postingan: e.target.value })}
-              className="w-full px-4 py-3 backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-              placeholder="https://..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Point Value
-            </label>
-            <input
-              type="number"
-              value={formData.point_value}
-              onChange={(e) => setFormData({ ...formData, point_value: e.target.value })}
-              className="w-full px-4 py-3 backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-              required
-              min="1"
-              max="2147483647"
-              placeholder="10"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-4 py-3 backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-              required
-            >
-              {statusOptions.map(status => (
-                <option key={status.value} value={status.value}>{status.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex gap-3 pt-6">
-            <GlassButton 
-              variant="secondary"
-              type="button" 
-              onClick={closeModal}
-              className="flex-1"
-            >
-              Batal
-            </GlassButton>
-            <GlassButton 
-              variant="primary"
-              type="submit"
-              className="flex-1"
-            >
-              {editingItem ? 'Update' : 'Simpan'}
-            </GlassButton>
-          </div>
-        </form>
-      </AdminModal>
 
       <ScrollToTopButton />
       </div>

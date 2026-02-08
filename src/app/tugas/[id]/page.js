@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSSOUser } from '@/hooks/useSSOUser';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Confetti from 'react-confetti';
-import { ArrowLeftIcon, ShareIcon, PlayCircleIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon, TrophyIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ShareIcon, PlayCircleIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon, TrophyIcon, TrashIcon, CameraIcon, BoltIcon } from '@heroicons/react/24/outline';
 import GlassCard from '../../components/GlassCard';
 import ProfileGatedButton from '../../../components/ProfileGatedButton';
 import { EventBoostCompletionDisplay, EventBoostRewardDisplay } from '../../../components/EventBoostComponents';
@@ -11,6 +11,7 @@ import { useMultipleEventBoost } from '../../../hooks/useMultipleEventBoost';
 import { useMainEventBoost } from '../../../hooks/useEventBoost';
 import { useProfileCompletion } from '../../../hooks/useProfileCompletion';
 import { useAdminStatus } from '../../../hooks/useAdminStatus';
+import ScreenshotUploadForm from '../../../components/tugas/ScreenshotUploadForm';
 
 // Mapping for dynamic background color by source_profile_link
 const SOURCE_BG_COLORS = {
@@ -36,6 +37,9 @@ export default function TaskDetailPage() {
   const { user, isLoaded, isSignedIn } = useSSOUser();
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const taskType = searchParams.get('type') || 'auto'; // 'auto' or 'screenshot'
+  
   // Profile completion check
   const { isComplete: isProfileComplete, loading: profileLoading, message: _profileMessage } = useProfileCompletion();
   
@@ -62,36 +66,51 @@ export default function TaskDetailPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(false);
   const confettiTimeoutRef = useRef();
 
   // Fetch public task details
   const fetchPublicTask = useCallback(async () => {
     try {
-      const response = await fetch(`/api/tugas/${id}`);
+      const endpoint = taskType === 'screenshot' 
+        ? `/api/tugas-ai-2/${id}`
+        : `/api/tugas/${id}`;
+      
+      const response = await fetch(endpoint, {
+        credentials: 'include',
+      });
+      
       if (!response.ok) {
         throw new Error('Task not found');
       }
       const result = await response.json();
       if (result.success) {
-        setTask(result.task);
+        setTask(result.task || result.data);
       } else {
         throw new Error(result.error || 'Failed to fetch task');
       }
     } catch (err) {
       setError(err.message);
     }
-  }, [id]);
+  }, [id, taskType]);
 
   // Fetch user-specific task details
   const fetchUserTask = useCallback(async (userMemberId) => {
     try {
-      const response = await fetch(`/api/tugas/${id}?memberId=${userMemberId}`);
+      const endpoint = taskType === 'screenshot' 
+        ? `/api/tugas-ai-2/${id}`
+        : `/api/tugas/${id}?memberId=${userMemberId}`;
+      
+      const response = await fetch(endpoint, {
+        credentials: 'include',
+      });
+      
       if (!response.ok) {
         throw new Error('Failed to fetch user task data');
       }
       const result = await response.json();
       if (result.success) {
-        setTask(result.task);
+        setTask(result.task || result.data);
       } else {
         throw new Error(result.error || 'Failed to fetch user task data');
       }
@@ -99,7 +118,7 @@ export default function TaskDetailPage() {
       console.error('Error fetching user task data:', err);
       // Don't set error here, keep the public task data
     }
-  }, [id]);
+  }, [id, taskType]);
 
   // Get member ID from user metadata
   const getMemberIdFromUser = useCallback(async () => {
@@ -149,7 +168,7 @@ export default function TaskDetailPage() {
     };
     
     loadData();
-  }, [id, isLoaded, isSignedIn, user, fetchPublicTask, fetchUserTask, getMemberIdFromUser]);
+  }, [id, taskType, isLoaded, isSignedIn, user, fetchPublicTask, fetchUserTask, getMemberIdFromUser]);
 
   // Confetti effect for completed tasks
   useEffect(() => {
@@ -281,6 +300,47 @@ export default function TaskDetailPage() {
       setDeleteLoading(false);
     }
   }, [isAdmin, task, id, router]);
+
+  // Handle screenshot upload submission
+  const handleScreenshotSubmit = async (formData) => {
+    try {
+      const response = await fetch(`/api/tugas/${id}/screenshot`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Gagal mengupload screenshot');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setShareMessage('Screenshot berhasil diupload! AI akan memverifikasi dalam 4 jam.');
+        setTimeout(() => setShareMessage(''), 3000);
+        setShowUploadForm(false);
+        
+        // Refresh task data
+        await fetchPublicTask();
+        if (memberId) {
+          await fetchUserTask(memberId);
+        }
+        
+        // Show confetti
+        setShowConfetti(true);
+        if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
+        confettiTimeoutRef.current = setTimeout(() => {
+          setShowConfetti(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Screenshot upload error:', error);
+      throw error;
+    }
+  };
+
   // Countdown Timer Component with responsive design
   const CountdownTimer = ({ deadline }) => {
     const [timeLeft, setTimeLeft] = useState({});
@@ -333,26 +393,81 @@ export default function TaskDetailPage() {
   // Render task button based on status and auth state
   const renderTaskButton = () => {
     if (!isSignedIn) {
+      const buttonText = taskType === 'screenshot' ? 'Upload Screenshot' : 'Kerjakan Tugas';
+      const Icon = taskType === 'screenshot' ? CameraIcon : PlayCircleIcon;
+      
       return (
         <button 
-          onClick={handleStartTask}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center gap-2"
+          onClick={taskType === 'screenshot' ? () => setShowUploadForm(true) : handleStartTask}
+          className={`w-full px-4 py-2 rounded-lg hover:opacity-90 transition-colors font-medium flex items-center justify-center gap-2 ${
+            taskType === 'screenshot' 
+              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white' 
+              : 'bg-blue-500 text-white'
+          }`}
         >
-          <PlayCircleIcon className="w-5 h-5" />
-          Kerjakan Tugas
+          <Icon className="w-5 h-5" />
+          {buttonText}
         </button>
       );
     }
 
     if (!task) return null;
 
+    // For screenshot tasks
+    if (taskType === 'screenshot') {
+      const hasUploadedScreenshot = task.tugas_ai_2_screenshots && task.tugas_ai_2_screenshots.length > 0;
+      
+      if (hasUploadedScreenshot) {
+        const latestScreenshot = task.tugas_ai_2_screenshots[0];
+        const isPassed = latestScreenshot.ai_verification_result?.passed;
+        const isProcessing = !latestScreenshot.processing_completed_at;
+        
+        if (isPassed) {
+          return (
+            <div className="flex items-center justify-center gap-2 text-green-600 font-semibold py-2">
+              <CheckCircleIcon className="w-5 h-5" />
+              <span>Selesai</span>
+            </div>
+          );
+        } else if (isProcessing) {
+          return (
+            <div className="flex items-center justify-center gap-2 text-yellow-600 font-semibold py-2">
+              <ClockIcon className="w-5 h-5 animate-pulse" />
+              <span>Sedang Verifikasi</span>
+            </div>
+          );
+        } else {
+          return (
+            <button
+              onClick={() => setShowUploadForm(true)}
+              className="w-full px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <ExclamationTriangleIcon className="w-5 h-5" />
+              Coba Lagi
+            </button>
+          );
+        }
+      }
+      
+      return (
+        <button
+          onClick={() => setShowUploadForm(true)}
+          className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-colors font-medium flex items-center justify-center gap-2"
+        >
+          <CameraIcon className="w-5 h-5" />
+          Upload Screenshot
+        </button>
+      );
+    }
+
+    // For auto-verify tasks (existing logic)
     switch (task.status_submission) {
       case 'tersedia':
         return (
           <ProfileGatedButton
             isProfileComplete={isProfileComplete}
             onClick={handleStartTask}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center gap-2"
+            className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center gap-2"
             tooltip="Lengkapi profil sosial media untuk mengerjakan tugas"
           >
             <PlayCircleIcon className="w-5 h-5" />
@@ -464,10 +579,25 @@ export default function TaskDetailPage() {
         {/* Task Detail Card */}
         <GlassCard className={`relative overflow-hidden ${isCompleted ? 'opacity-80' : ''}`} padding="none">
           <div className="p-4 sm:p-6">
+            {/* Task Type Badge */}
+            <div className="mb-3">
+              {taskType === 'screenshot' ? (
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 font-medium text-sm">
+                  <CameraIcon className="h-5 w-5" />
+                  <span>Screenshot Task</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 font-medium text-sm">
+                  <BoltIcon className="h-5 w-5" />
+                  <span>Auto-Verify Task</span>
+                </span>
+              )}
+            </div>
+            
             {/* Header: Title & Actions */}
             <div className="flex justify-between items-start gap-3 mb-3">
               <h1 className={`text-lg sm:text-xl font-bold text-gray-800 leading-tight ${isCompleted ? 'line-through text-gray-500' : ''}`}>
-                {task.nama_tugas}
+                {task.keyword_tugas || task.nama_tugas}
               </h1>
               
               <div className="flex items-center gap-1 flex-shrink-0">
@@ -562,6 +692,96 @@ export default function TaskDetailPage() {
                 <p className="mt-3 text-center text-xs text-gray-400">
                 Login untuk mulai mengerjakan
                 </p>
+            )}
+
+            {/* Screenshot Task Specific Sections */}
+            {taskType === 'screenshot' && (
+              <div className="mt-4 space-y-4">
+                {/* Verification Rules */}
+                {task.verification_rules && (
+                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h3 className="text-sm font-semibold text-purple-900 mb-2">Aturan Verifikasi</h3>
+                    {task.verification_rules.required_keywords && (
+                      <div>
+                        <p className="text-xs text-purple-800 mb-2">Kata kunci yang harus ada:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {task.verification_rules.required_keywords.map((keyword, idx) => (
+                            <span 
+                              key={idx}
+                              className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium"
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Uploaded Screenshots Display */}
+                {task.tugas_ai_2_screenshots && task.tugas_ai_2_screenshots.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-800">Screenshot yang Diupload</h3>
+                    {task.tugas_ai_2_screenshots.map((screenshot) => (
+                      <div key={screenshot.id} className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <img
+                          src={screenshot.screenshot_url}
+                          alt="Uploaded screenshot"
+                          className="w-full rounded-lg border border-gray-300 mb-2"
+                        />
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <p>Diupload: {new Date(screenshot.uploaded_at).toLocaleString('id-ID')}</p>
+                          {screenshot.link_komentar && (
+                            <p className="break-all">
+                              Link: <a href={screenshot.link_komentar} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{screenshot.link_komentar}</a>
+                            </p>
+                          )}
+                          {screenshot.ai_verification_result && (
+                            <div className={`p-2 rounded mt-2 ${
+                              screenshot.ai_verification_result.passed 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              <p className="font-semibold">
+                                Status: {screenshot.ai_verification_result.passed ? 'Lulus Verifikasi' : 'Gagal Verifikasi'}
+                              </p>
+                            </div>
+                          )}
+                          {!screenshot.processing_completed_at && (
+                            <div className="p-2 bg-yellow-100 text-yellow-800 rounded mt-2">
+                              <p className="font-semibold flex items-center gap-1">
+                                <ClockIcon className="w-4 h-4" />
+                                Sedang diproses...
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Screenshot Upload Form */}
+                {showUploadForm && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-gray-800">Upload Screenshot Baru</h3>
+                      <button
+                        onClick={() => setShowUploadForm(false)}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        Tutup
+                      </button>
+                    </div>
+                    <ScreenshotUploadForm
+                      task={task}
+                      onSubmit={handleScreenshotSubmit}
+                      onCancel={() => setShowUploadForm(false)}
+                    />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </GlassCard>
