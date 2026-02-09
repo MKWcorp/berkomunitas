@@ -44,17 +44,24 @@ export async function POST(request) {
       );
     }
 
-    // Check if user exists by email OR google_id (for existing users)
+    // PRIORITY 1: Find user by email first (to support manual email updates)
+    // This ensures that when admins change a user's email manually,
+    // the user can login with that email without creating a duplicate account
     let member = await retryPrismaOperation(async () => {
       return await prisma.members.findFirst({
-        where: {
-          OR: [
-            { email: email },
-            { google_id: googleId },
-          ],
-        },
+        where: { email: email },
       });
     });
+
+    // PRIORITY 2: If not found by email, try to find by google_id
+    // This handles returning users who already logged in with Google before
+    if (!member) {
+      member = await retryPrismaOperation(async () => {
+        return await prisma.members.findFirst({
+          where: { google_id: googleId },
+        });
+      });
+    }
 
     if (member) {
       // User exists - Update with Google info (auto-link old Clerk users)

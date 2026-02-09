@@ -156,14 +156,14 @@ export async function PUT(req, { params }) {
       // Update email if provided
       let updatedEmail = null;
       if (email !== undefined) {
-        // Get the member's clerk_id
+        // Get the member
         const member = await tx.members.findUnique({ where: { id } });
-        if (!member || !member.clerk_id) {
-          throw Object.assign(new Error('Member tidak memiliki clerk_id'), { code: 'NO_CLERK_ID' });
+        if (!member) {
+          throw Object.assign(new Error('Member tidak ditemukan'), { code: 'MEMBER_NOT_FOUND' });
         }
         // Only update the primary email
         const currentPrimary = await tx.member_emails.findFirst({
-          where: { google_id: member.clerk_id, is_primary: true }
+          where: { member_id: member.id, is_primary: true }
         });
         if (currentPrimary) {
           updatedEmail = await tx.member_emails.update({
@@ -173,9 +173,10 @@ export async function PUT(req, { params }) {
         } else {
           updatedEmail = await tx.member_emails.create({
             data: {
-              google_id: member.clerk_id,
+              member_id: member.id,
               email,
-              is_primary: true
+              is_primary: true,
+              verified: true
             }
           });
         }
