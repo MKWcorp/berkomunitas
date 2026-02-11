@@ -90,7 +90,6 @@ def test_merge_logic():
     print("\n✅ Test 1 PASSED")
     
     # Test 2: Alternative - Merge into specific user (User 270)
-    # Test 2: Alternative - Merge into specific user (User 270)
     print("\n" + "=" * 80)
     print("TEST 2: Alternative - Merge into User 270 specifically")
     print("=" * 80)
