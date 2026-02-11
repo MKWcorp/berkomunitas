@@ -13,6 +13,11 @@ Strategy:
 3. Combine loyalty points and coins
 4. Transfer all related records (tasks, history, notifications, etc.)
 5. Delete users 175 and 218
+
+Note on SQL Injection:
+This script uses f-strings for table and column names in SQL queries. This is safe
+because all table and column names are from a controlled list defined in this script,
+not from user input. User-provided values (IDs, emails) are properly parameterized.
 """
 import os
 from dotenv import load_dotenv
@@ -126,13 +131,14 @@ def merge_three_users(target_user_id=270, source_user_ids=[175, 218], target_ema
             ('platform_session', 'member_id'),
             ('member_badges', 'member_id'),
             ('profil_sosial_media', 'id_member'),
-            ('profile_wall_posts', 'author_id'),
-            ('profile_wall_posts', 'profile_owner_id'),
             ('user_privileges', 'member_id'),
             ('member_task_stats', 'member_id'),
             ('bc_drwskincare_plus', 'member_id'),
             ('drwcorp_employees', 'member_id'),
         ]
+        
+        # Special handling for profile_wall_posts (has multiple member_id columns)
+        profile_wall_columns = ['author_id', 'profile_owner_id']
         
         transferred_counts = {}
         
@@ -142,18 +148,20 @@ def merge_three_users(target_user_id=270, source_user_ids=[175, 218], target_ema
             for table, column in tables_to_transfer:
                 try:
                     # Check if there's data to transfer
+                    # Note: Using string formatting here is safe because table and column names
+                    # are from a controlled list defined in this script, not from user input
                     cur.execute(f"SELECT COUNT(*) as count FROM {table} WHERE {column} = %s", (src_user_id,))
                     count = cur.fetchone()['count']
                     
                     if count > 0:
                         if dry_run:
-                            print(f"      Would transfer {count} rows from {table}")
+                            print(f"      Would transfer {count} rows from {table}.{column}")
                         else:
                             cur.execute(
                                 f"UPDATE {table} SET {column} = %s WHERE {column} = %s",
                                 (target_user_id, src_user_id)
                             )
-                            print(f"      ✅ Transferred {count} rows from {table}")
+                            print(f"      ✅ Transferred {count} rows from {table}.{column}")
                         
                         key = f"{table}_{column}"
                         transferred_counts[key] = transferred_counts.get(key, 0) + count
@@ -162,6 +170,25 @@ def merge_three_users(target_user_id=270, source_user_ids=[175, 218], target_ema
                     # Table might not exist or column might be different - skip silently
                     if "does not exist" not in str(e):
                         print(f"      ⚠️  {table}.{column}: {e}")
+            
+            # Handle profile_wall_posts separately (has multiple member_id columns)
+            for column in profile_wall_columns:
+                try:
+                    cur.execute(f"SELECT COUNT(*) as count FROM profile_wall_posts WHERE {column} = %s", (src_user_id,))
+                    count = cur.fetchone()['count']
+                    
+                    if count > 0:
+                        if dry_run:
+                            print(f"      Would transfer {count} rows from profile_wall_posts.{column}")
+                        else:
+                            cur.execute(
+                                f"UPDATE profile_wall_posts SET {column} = %s WHERE {column} = %s",
+                                (target_user_id, src_user_id)
+                            )
+                            print(f"      ✅ Transferred {count} rows from profile_wall_posts.{column}")
+                except Exception as e:
+                    if "does not exist" not in str(e):
+                        print(f"      ⚠️  profile_wall_posts.{column}: {e}")
         
         # Handle user_usernames specially - delete old ones, keep or update target one
         for src_user_id in source_user_ids:
