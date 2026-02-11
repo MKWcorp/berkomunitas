@@ -3,13 +3,18 @@
 ## Task Completed
 ✅ Successfully created scripts and documentation to merge three user accounts (IDs: 175, 218, 270) into a single account with email `92allstaarrr@gmail.com`.
 
+**Key Feature:** The script automatically selects the user with the **most points** (coins + loyalty) as the target account.
+
 ## What Was Delivered
 
 ### 1. Main Merge Script
 **File:** `scripts/merge-users-175-218-270.py`
 
 Features:
-- Merges Users 175 and 218 into User 270 (which already has the target email)
+- **Auto-detects** which user has the most points (coins + loyalty_point)
+- Keeps that user as the target account
+- Merges the other two users into the one with most points
+- Changes target user's email to 92allstaarrr@gmail.com
 - Combines all loyalty points and coins from all three accounts
 - Transfers all related data:
   - Coin history
@@ -68,17 +73,22 @@ Contents:
 ## Expected Results After Merge
 
 ### Final State
-User 270 will have:
-- **Email:** 92allstaarrr@gmail.com
-- **Name:** M Bintang Laz R
-- **WhatsApp:** 6285743027132
+The user with the **most points** will have:
+- **Email:** 92allstaarrr@gmail.com (changed to this)
 - **Total Coins:** 450 (sum of all three accounts)
 - **Total Loyalty:** 1250 (sum of all three accounts)
 - **Total Points:** 1700
+- All task history, badges, notifications from all three accounts
+
+### Process
+1. Script analyzes Users 175, 218, and 270
+2. Identifies which one has the most points
+3. Keeps that user, changes email to 92allstaarrr@gmail.com
+4. Transfers all data from the other two users
+5. Deletes the other two users
 
 ### Deleted Users
-- User 175 (bintang arr, bintang2329@gmail.com) ❌ Deleted
-- User 218 (Mohammad Bintang Lazuardi Rachmanie, mohbintanglr@gmail.com) ❌ Deleted
+The two users with fewer points will be deleted after their data is transferred.
 
 ## How to Use
 
@@ -166,6 +176,7 @@ If you encounter any issues:
 ## Success Criteria Met
 
 ✅ Merge script handles all three accounts
+✅ **Auto-selects user with most points as target**
 ✅ Target email is set to 92allstaarrr@gmail.com
 ✅ All points are preserved and combined
 ✅ All related data is transferred
@@ -179,4 +190,4 @@ If you encounter any issues:
 
 **Status:** ✅ READY FOR EXECUTION
 
-The scripts are production-ready and waiting for database access to be executed.
+The script automatically selects the user with the most points as the target, then merges the other two users into it.

@@ -2,20 +2,20 @@
 
 ## Quick Start
 
-There are two scripts available for merging these user accounts:
+The merge script automatically finds the user with the **most points** and keeps that account.
 
-### Option 1: Direct Merge into User 270 (Recommended)
+### Automatic Merge (Recommended)
 
-This merges all three accounts into User 270, which already has the target email `92allstaarrr@gmail.com`.
+This automatically finds and keeps the user with the most points (coins + loyalty).
 
 ```bash
 cd /home/runner/work/berkomunitas/berkomunitas
 python scripts/merge-users-175-218-270.py
 ```
 
-### Option 2: Smart Merge (Auto-select best target)
+### Smart Merge Alternative
 
-This automatically finds the user with the most points and uses them as the target.
+The smart-merge script also auto-selects the best target (same behavior).
 
 ```bash
 cd /home/runner/work/berkomunitas/berkomunitas
@@ -43,6 +43,11 @@ python scripts/smart-merge-users-175-218-270.py
 
 ## What Happens During Merge
 
+### Automatic Selection
+- 🔍 Script analyzes all three users
+- 🏆 Finds the user with most points (coins + loyalty)
+- ✅ Uses that user as the target account
+
 ### Data Transfer
 - ✅ All coins and loyalty points are combined
 - ✅ All task submissions are transferred
@@ -53,9 +58,9 @@ python scripts/smart-merge-users-175-218-270.py
 - ✅ All user activities are transferred
 
 ### Data Cleanup
-- ❌ Old user accounts (175 and 218) are deleted
+- ❌ The two users with fewer points are deleted
 - ❌ Old usernames are removed
-- ✅ Target account (270) gets final email: `92allstaarrr@gmail.com`
+- ✅ Target account (user with most points) gets email: `92allstaarrr@gmail.com`
 
 ## Step-by-Step Guide
 
@@ -64,13 +69,13 @@ python scripts/smart-merge-users-175-218-270.py
 First, check the current state of the users:
 
 ```bash
-python scripts/smart-merge-users-175-218-270.py
+python scripts/merge-users-175-218-270.py
 ```
 
 This will show:
-- Current user details
-- Points breakdown
-- Which user has the most points
+- Current user details for all three accounts
+- Points breakdown for each user
+- **Which user has the most points** (will be kept as target)
 
 ### 2. Dry Run
 
@@ -90,16 +95,16 @@ If everything looks correct, type `yes` when prompted to proceed with the actual
 After the merge completes, verify:
 
 ```sql
--- Check the merged user exists
+-- Check the merged user exists (will be the one with most points)
 SELECT id, nama_lengkap, email, coin, loyalty_point 
 FROM members 
-WHERE id = 270;
+WHERE email = '92allstaarrr@gmail.com';
 
 -- Verify old users are gone
 SELECT id, email 
 FROM members 
-WHERE id IN (175, 218);
--- Should return 0 rows
+WHERE id IN (175, 218, 270);
+-- Should return only 1 row (the user with most points)
 ```
 
 ## Troubleshooting

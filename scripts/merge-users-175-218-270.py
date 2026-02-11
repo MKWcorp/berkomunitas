@@ -8,11 +8,12 @@ According to the problem statement:
 - User 270: M Bintang Laz R, 92allstaarrr@gmail.com, username: mbintanglr, WA: 6285743027132
 
 Strategy:
-1. Keep the user with the target email (92allstaarrr@gmail.com) - User 270
-2. Merge all data from users 175 and 218 into user 270
-3. Combine loyalty points and coins
-4. Transfer all related records (tasks, history, notifications, etc.)
-5. Delete users 175 and 218
+1. Find the user with the most points (coins + loyalty_point)
+2. Keep that user and change their email to 92allstaarrr@gmail.com
+3. Transfer all data from the other users into the user with most points
+4. Combine loyalty points and coins
+5. Transfer all related records (tasks, history, notifications, etc.)
+6. Delete the other two users
 
 Note on SQL Injection:
 This script uses f-strings for table and column names in SQL queries. This is safe
@@ -31,18 +32,63 @@ if DATABASE_URL and '?schema=' in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.split('?schema=')[0]
 
 
-def merge_three_users(target_user_id=270, source_user_ids=[175, 218], target_email='92allstaarrr@gmail.com', dry_run=False):
+def merge_three_users(target_user_id=None, source_user_ids=None, user_ids=[175, 218, 270], target_email='92allstaarrr@gmail.com', dry_run=False):
     """
     Merge multiple users into one target user
     
     Args:
-        target_user_id: User ID to keep (will receive all data)
-        source_user_ids: List of user IDs to merge from (will be deleted)
+        target_user_id: User ID to keep (will receive all data). If None, auto-select user with most points
+        source_user_ids: List of user IDs to merge from (will be deleted). If None, auto-calculated
+        user_ids: List of all user IDs to consider (used when auto-selecting target)
         target_email: Final email for the target user
         dry_run: If True, only show what would happen without making changes
     """
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    # Auto-detect target user if not specified
+    if target_user_id is None:
+        print("=" * 80)
+        print(f"🔍 AUTO-DETECTING user with most points from: {', '.join(map(str, user_ids))}")
+        print("=" * 80)
+        
+        cur.execute(
+            "SELECT * FROM members WHERE id = ANY(%s) ORDER BY id",
+            (user_ids,)
+        )
+        users = cur.fetchall()
+        
+        if len(users) != len(user_ids):
+            print(f"❌ ERROR: Expected {len(user_ids)} users, found {len(users)}")
+            conn.close()
+            return False
+        
+        # Calculate total points for each user
+        print("\n📊 Analyzing users:")
+        user_points = {}
+        
+        for user in users:
+            total_points = user['coin'] + user['loyalty_point']
+            user_points[user['id']] = total_points
+            
+            print(f"\n   User {user['id']}:")
+            print(f"      Name: {user['nama_lengkap']}")
+            print(f"      Email: {user['email']}")
+            print(f"      Coins: {user['coin']}")
+            print(f"      Loyalty: {user['loyalty_point']}")
+            print(f"      TOTAL POINTS: {total_points}")
+        
+        # Find user with most points
+        target_user_id = max(user_points, key=user_points.get)
+        max_points = user_points[target_user_id]
+        
+        print(f"\n🏆 User {target_user_id} has the most points: {max_points}")
+        print(f"   This user will be kept as the target account")
+        
+        # Determine source users
+        source_user_ids = [uid for uid in user_ids if uid != target_user_id]
+        
+        print(f"\n📦 Users to merge into target: {', '.join(map(str, source_user_ids))}")
     
     print("=" * 80)
     print(f"MERGE USERS {', '.join(map(str, source_user_ids))} → USER {target_user_id}")
@@ -286,22 +332,22 @@ def merge_three_users(target_user_id=270, source_user_ids=[175, 218], target_ema
 
 if __name__ == "__main__":
     print("\n" + "=" * 80)
-    print("MERGE USERS 175, 218, 270 INTO USER 270")
+    print("SMART MERGE: Users 175, 218, 270")
     print("Target Email: 92allstaarrr@gmail.com")
     print("=" * 80)
     print("\nThis script will:")
-    print("1. Keep User 270 (M Bintang Laz R, 92allstaarrr@gmail.com)")
-    print("2. Merge all data from Users 175 and 218 into User 270")
-    print("3. Combine all coins and loyalty points")
-    print("4. Transfer all related records (tasks, history, notifications, etc.)")
-    print("5. Delete Users 175 and 218")
+    print("1. Find the user with the MOST POINTS (coins + loyalty)")
+    print("2. Keep that user and set email to 92allstaarrr@gmail.com")
+    print("3. Merge all data from the other users into the one with most points")
+    print("4. Combine all coins and loyalty points")
+    print("5. Transfer all related records (tasks, history, notifications, etc.)")
+    print("6. Delete the other two users")
     print("\n")
     
     # First run in dry-run mode to show what will happen
     print("🔍 Running DRY RUN first to preview changes...\n")
     merge_three_users(
-        target_user_id=270,
-        source_user_ids=[175, 218],
+        user_ids=[175, 218, 270],
         target_email='92allstaarrr@gmail.com',
         dry_run=True
     )
@@ -312,8 +358,7 @@ if __name__ == "__main__":
     if response.lower() == 'yes':
         print("\n🔄 Proceeding with actual merge...\n")
         merge_three_users(
-            target_user_id=270,
-            source_user_ids=[175, 218],
+            user_ids=[175, 218, 270],
             target_email='92allstaarrr@gmail.com',
             dry_run=False
         )
