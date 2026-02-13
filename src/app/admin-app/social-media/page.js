@@ -181,7 +181,7 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Username/Handle
+              Username/Handle <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -189,6 +189,7 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
               placeholder="e.g. @username"
               value={form.username}
               onChange={(e) => setForm({...form, username: e.target.value})}
+              required
             />
           </div>
 
@@ -226,7 +227,7 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
             <GlassButton 
               variant="primary" 
               onClick={() => onSave(form)}
-              disabled={!form.member_id || !form.platform || !form.account_url}
+              disabled={!form.member_id || !form.platform || !form.username || !form.account_url}
             >
               {mode === 'create' ? 'Tambah' : 'Simpan Perubahan'}
             </GlassButton>
@@ -313,20 +314,31 @@ export default function SocialMediaPage() {
       const method = modalMode === 'create' ? 'POST' : 'PUT';
       const url = modalMode === 'create' ? '/api/admin/social-media' : `/api/admin/social-media/${editSocialMedia.id}`;
       
+      // Map frontend field names to backend field names
+      const payload = {
+        id_member: form.member_id,
+        platform: form.platform,
+        username_sosmed: form.username,
+        profile_link: form.account_url
+      };
+      
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error(`Failed to ${modalMode} social media`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `Failed to ${modalMode} social media`);
+      }
       
       setModalOpen(false);
       setEditSocialMedia(null);
       fetchSocialMedias();
     } catch (error) {
       console.error('Error saving social media:', error);
-      alert(`Gagal ${modalMode === 'create' ? 'menambah' : 'mengupdate'} social media`);
+      alert(`Gagal ${modalMode === 'create' ? 'menambah' : 'mengupdate'} social media: ${error.message}`);
     }
   }
 
@@ -354,7 +366,15 @@ export default function SocialMediaPage() {
 
   function handleEditSocialMedia(socialMedia) {
     setModalMode('edit');
-    setEditSocialMedia(socialMedia);
+    // Map API response fields to form fields
+    const mappedData = {
+      id: socialMedia.id,
+      member_id: socialMedia.member?.id || '',
+      platform: socialMedia.platform,
+      username: socialMedia.username,
+      account_url: socialMedia.account_url
+    };
+    setEditSocialMedia(mappedData);
     setModalOpen(true);
   }
 

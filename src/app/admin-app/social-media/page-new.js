@@ -181,7 +181,7 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Username/Handle
+              Username/Handle <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -189,6 +189,7 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
               placeholder="e.g. @username"
               value={form.username}
               onChange={(e) => setForm({...form, username: e.target.value})}
+              required
             />
           </div>
 
@@ -226,7 +227,7 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
             <GlassButton 
               variant="primary" 
               onClick={() => onSave(form)}
-              disabled={!form.member_id || !form.platform || !form.account_url}
+              disabled={!form.member_id || !form.platform || !form.username || !form.account_url}
             >
               {mode === 'create' ? 'Tambah' : 'Simpan Perubahan'}
             </GlassButton>
@@ -279,16 +280,26 @@ export default function SocialMediaPage() {
 
   async function fetchSocialMedias() {
     setLoading(true);
+    console.log('🔍 Fetching social medias...');
     try {
       const res = await fetch('/api/admin/social-media');
+      console.log('📡 Response status:', res.status, 'OK:', res.ok);
+      
       if (!res.ok) throw new Error('Failed to fetch social media data');
       const data = await res.json();
-      setSocialMedias(Array.isArray(data.socialMedias) ? data.socialMedias : []);
+      console.log('📊 API Response:', data);
+      
+      // API sekarang mengembalikan flat array 'socialMedias'
+      const socialMediaArray = Array.isArray(data.socialMedias) ? data.socialMedias : [];
+      console.log('🔄 Setting socialMedias array:', socialMediaArray.length, 'items');
+      console.log('🔍 Sample data:', socialMediaArray.slice(0, 2));
+      setSocialMedias(socialMediaArray);
     } catch (error) {
-      console.error('Error fetching social medias:', error);
+      console.error('❌ Error fetching social medias:', error);
       setSocialMedias([]);
     } finally {
       setLoading(false);
+      console.log('✅ Fetch complete, loading set to false');
     }
   }
 
@@ -297,20 +308,31 @@ export default function SocialMediaPage() {
       const method = modalMode === 'create' ? 'POST' : 'PUT';
       const url = modalMode === 'create' ? '/api/admin/social-media' : `/api/admin/social-media/${editSocialMedia.id}`;
       
+      // Map frontend field names to backend field names
+      const payload = {
+        id_member: form.member_id,
+        platform: form.platform,
+        username_sosmed: form.username,
+        profile_link: form.account_url
+      };
+      
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error(`Failed to ${modalMode} social media`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `Failed to ${modalMode} social media`);
+      }
       
       setModalOpen(false);
       setEditSocialMedia(null);
       fetchSocialMedias();
     } catch (error) {
       console.error('Error saving social media:', error);
-      alert(`Gagal ${modalMode === 'create' ? 'menambah' : 'mengupdate'} social media`);
+      alert(`Gagal ${modalMode === 'create' ? 'menambah' : 'mengupdate'} social media: ${error.message}`);
     }
   }
 
@@ -338,17 +360,38 @@ export default function SocialMediaPage() {
 
   function handleEditSocialMedia(socialMedia) {
     setModalMode('edit');
-    setEditSocialMedia(socialMedia);
+    // Map API response fields to form fields
+    const mappedData = {
+      id: socialMedia.id,
+      member_id: socialMedia.member?.id || '',
+      platform: socialMedia.platform,
+      username: socialMedia.username,
+      account_url: socialMedia.account_url
+    };
+    setEditSocialMedia(mappedData);
     setModalOpen(true);
   }
 
   // Filter social medias based on search
-  const filteredSocialMedias = socialMedias.filter(sm =>
-    sm.member?.nama_lengkap?.toLowerCase().includes(search.toLowerCase()) ||
-    sm.platform?.toLowerCase().includes(search.toLowerCase()) ||
-    sm.username?.toLowerCase().includes(search.toLowerCase()) ||
-    sm.account_url?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSocialMedias = socialMedias.filter(sm => {
+    if (!search) return true; // Show all if no search
+    
+    const searchLower = search.toLowerCase();
+    const matchName = sm.member?.nama_lengkap?.toLowerCase().includes(searchLower);
+    const matchPlatform = sm.platform?.toLowerCase().includes(searchLower);
+    const matchUsername = sm.username?.toLowerCase().includes(searchLower);
+    const matchUrl = sm.account_url?.toLowerCase().includes(searchLower);
+    
+    const isMatch = matchName || matchPlatform || matchUsername || matchUrl;
+    
+    if (search && search.length > 2) {
+      console.log('🔎 Search:', search, '| Member:', sm.member?.nama_lengkap, '| Match:', isMatch);
+    }
+    
+    return isMatch;
+  });
+  
+  console.log('📊 Total items:', socialMedias.length, '| Filtered:', filteredSocialMedias.length, '| Search:', search);
 
   if (!isLoaded || loading) {
     return (

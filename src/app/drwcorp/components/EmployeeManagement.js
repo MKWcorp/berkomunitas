@@ -103,6 +103,8 @@ export default function EmployeeManagement({
   loading,
   confirmMatch
 }) {
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+
   const getStatusBadge = (status) => {
     const config = {
       matched: { color: 'text-green-600', label: '✓', bg: 'bg-green-50' },
@@ -280,14 +282,38 @@ export default function EmployeeManagement({
                             </details>
                           )}
                           
-                          {/* Manual Link Search */}
-                          {!emp.members && (
-                            <div className="flex items-center gap-1">
-                              <LinkIcon className="w-3 h-3 text-gray-400" />
-                              <ManualLinkSearch 
-                                employeeId={emp.id} 
-                                onLink={confirmMatch}
-                              />
+                          {/* Edit Link for Matched Employees */}
+                          {emp.members && editingEmployeeId !== emp.id && (
+                            <button
+                              onClick={() => setEditingEmployeeId(emp.id)}
+                              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+                            >
+                              <LinkIcon className="w-3 h-3" />
+                              Edit Link
+                            </button>
+                          )}
+
+                          {/* Manual Link Search for Unmatched or Editing */}
+                          {(!emp.members || editingEmployeeId === emp.id) && (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1">
+                                <LinkIcon className="w-3 h-3 text-gray-400" />
+                                <ManualLinkSearch 
+                                  employeeId={emp.id} 
+                                  onLink={(empId, memberId) => {
+                                    confirmMatch(empId, memberId);
+                                    setEditingEmployeeId(null);
+                                  }}
+                                />
+                              </div>
+                              {editingEmployeeId === emp.id && (
+                                <button
+                                  onClick={() => setEditingEmployeeId(null)}
+                                  className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 w-full"
+                                >
+                                  Cancel
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
