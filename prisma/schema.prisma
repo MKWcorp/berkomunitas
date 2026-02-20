@@ -812,3 +812,26 @@ model drwcorp_employees {
   @@index([matching_status], map: "idx_drwcorp_employees_matching_status")
   @@index([member_id], map: "idx_drwcorp_employees_member_id")
 }
+
+model tiktok_contents {
+  id                  Int       @id @default(autoincrement())
+  content_id          String    @unique @db.VarChar(255)
+  author_username     String    @db.VarChar(255)
+  author_nickname     String?   @db.VarChar(255)
+  content_type        String?   @db.VarChar(50)
+  description         String?
+  video_url           String?
+  cover_url           String?
+  like_count          Int?      @default(0)
+  comment_count       Int?      @default(0)
+  share_count         Int?      @default(0)
+  view_count          Int?      @default(0)
+  created_at_tiktok   DateTime? @db.Timestamp
+  scraped_at          DateTime? @default(now()) @db.Timestamp
+  updated_at          DateTime? @default(now()) @updatedAt @db.Timestamp
+  last_comment_scrape DateTime? @db.Timestamp
+  
+  @@index([author_username], map: "idx_tiktok_contents_author")
+  @@index([created_at_tiktok], map: "idx_tiktok_contents_created")
+  @@index([scraped_at], map: "idx_tiktok_contents_scraped")
+}
