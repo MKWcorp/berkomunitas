@@ -1,5 +1,5 @@
 // SSO Implementation - No Clerk provider needed
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import NavigationWrapper from './components/NavigationWrapper';
 import ContentWrapper from './components/ContentWrapper';
@@ -9,7 +9,7 @@ import { GlassThemeProvider } from '@/hooks/useGlassTheme';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] });
 
 export const metadata = {
   title: 'Berkomunitas',

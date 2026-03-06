@@ -8,6 +8,7 @@ import GlassCard from '../../app/components/GlassCard';
 import ProfileGatedButton from '../ProfileGatedButton';
 import { EventBoostTableDisplay } from '../EventBoostComponents';
 import ScreenshotUploadForm from './ScreenshotUploadForm';
+import ScreenshotTaskDropdown from './ScreenshotTaskDropdown';
 import { 
   PlayCircleIcon, 
   CheckCircleIcon, 
@@ -46,6 +47,16 @@ export default function TaskCard({
   formatInstagramLink,
   router,
 }) {
+  // Screenshot tasks (TikTok, Facebook, etc.) use the new dropdown flow
+  if (task.task_type === 'screenshot') {
+    return (
+      <ScreenshotTaskDropdown
+        task={task}
+        onSuccess={onScreenshotSubmit}
+      />
+    );
+  }
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
 

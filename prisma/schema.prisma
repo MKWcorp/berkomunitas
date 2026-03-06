@@ -431,6 +431,7 @@ model members {
   reward_redemptions                                              reward_redemptions[]
   task_submissions                                                task_submissions[]
   tugas_ai_2_screenshots                                          tugas_ai_2_screenshots[]
+  tugas_ai_2_submissions                                          tugas_ai_2_submissions[]
   user_privileges                                                 user_privileges[]
   user_usernames                                                  user_usernames?
   drwcorp_employees                                               drwcorp_employees[]
@@ -643,28 +644,89 @@ model tugas_ai {
 }
 
 model tugas_ai_2 {
-  id                      Int                       @id @default(autoincrement())
-  keyword_tugas           String?                   @db.VarChar(255)
+  id                      Int                         @id @default(autoincrement())
+  keyword_tugas           String?                     @db.VarChar(255)
   deskripsi_tugas         String?
   link_postingan          String?
-  status                  String                    @default("tersedia") @db.VarChar(50)
-  point_value             Int?                      @default(10)
-  source                  String?                   @db.VarChar(50)
-  verification_rules      Json?
-  post_timestamp          DateTime                  @default(now()) @db.Timestamptz(6)
-  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime?                 @db.Timestamptz(6)
+  status                  String                      @default("tersedia") @db.VarChar(50)
+  point_value             Int?                        @default(10)
+  source                  String?                     @db.VarChar(50)   // 'tiktok' | 'facebook' | 'instagram'
+  tiktok_content_id       Int?                        // FK → tiktok_contents.id (traceability)
+  verification_rules      Json?                       // { keyword, platform, username_required, min_confidence }
+  max_submissions         Int?                        @default(1)        // max berapa kali task bisa dikerjakan per user (retry)
+  post_timestamp          DateTime                    @default(now()) @db.Timestamptz(6)
+  expires_at              DateTime?                   @db.Timestamptz(6) // task kadaluarsa (null = tidak ada batas)
+  created_at              DateTime?                   @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                   @db.Timestamptz(6)
   tugas_ai_2_screenshots  tugas_ai_2_screenshots[]
+  tugas_ai_2_submissions  tugas_ai_2_submissions[]
 
   @@index([status])
   @@index([source])
+  @@index([tiktok_content_id])
+  @@index([expires_at])
+}
+
+/// Tabel submission utama untuk semua task berbasis screenshot (TikTok, Facebook, dan future platforms).
+/// Lebih scalable dari task_submissions karena tidak hard-coded ke satu platform.
+model tugas_ai_2_submissions {
+  id                    Int        @id @default(autoincrement())
+
+  // Core references
+  tugas_ai_2_id         Int
+  member_id             Int
+
+  // Platform context — di-denormalize dari tugas_ai_2.source untuk query performance
+  platform              String     @db.VarChar(50)   // 'tiktok' | 'facebook' | 'instagram'
+
+  // Status machine
+  // dikerjakan → menunggu_screenshot → sedang_verifikasi → selesai
+  //                                                       ↘ gagal → (retry) → dikerjakan
+  //              → expired (jika batas_waktu terlewat)
+  status                String     @default("dikerjakan") @db.VarChar(50)
+
+  // Lifecycle timestamps
+  created_at            DateTime   @default(now()) @db.Timestamptz(6)
+  waktu_klik            DateTime?  @db.Timestamptz(6)  // kapan user klik tombol "Kerjakan"
+  waktu_upload          DateTime?  @db.Timestamptz(6)  // kapan screenshot diupload
+  batas_waktu           DateTime?  @db.Timestamptz(6)  // deadline: waktu_klik + window (misal 24h)
+  waktu_verifikasi      DateTime?  @db.Timestamptz(6)  // kapan status final ditetapkan
+  updated_at            DateTime?  @db.Timestamptz(6)
+
+  // Verification
+  verification_attempts Int        @default(0)
+  max_retries           Int        @default(3)
+  verified_by           String?    @db.VarChar(255)  // 'n8n_ai' | 'admin:{id}' | 'auto'
+
+  // Result
+  point_awarded         Int?       // poin aktual yang diberikan (bisa beda dari task.point_value)
+
+  // Audit
+  notes                 String?    // catatan admin/system
+  rejection_reason      String?    @db.VarChar(500)  // alasan penolakan (terstruktur)
+  metadata              Json?      // extensible: { ip, user_agent, tiktok_username, dst }
+
+  // Relations
+  tugas_ai_2            tugas_ai_2               @relation(fields: [tugas_ai_2_id], references: [id], onDelete: Cascade)
+  members               members                  @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  screenshots           tugas_ai_2_screenshots[]
+
+  @@unique([member_id, tugas_ai_2_id])        // 1 user hanya bisa punya 1 submission aktif per task
+  @@index([tugas_ai_2_id])
+  @@index([member_id])
+  @@index([status])
+  @@index([platform])
+  @@index([batas_waktu])                      // untuk cron expired check
+  @@index([member_id, status])                // untuk dashboard user
+  @@index([platform, status])                 // untuk admin per-platform view
+  @@index([created_at])
 }
 
 model tugas_ai_2_screenshots {
   id                       Int        @id @default(autoincrement())
   tugas_ai_2_id            Int
   member_id                Int?
-  task_submission_id       Int?
+  submission_id            Int?       // FK → tugas_ai_2_submissions.id (replaces task_submission_id)
   screenshot_url           String
   screenshot_filename      String?    @db.VarChar(255)
   link_komentar            String?
@@ -682,14 +744,15 @@ model tugas_ai_2_screenshots {
   created_at               DateTime   @default(now()) @db.Timestamptz(6)
   updated_at               DateTime?  @db.Timestamptz(6)
   admin_notes              String?
-  tugas_ai_2               tugas_ai_2 @relation(fields: [tugas_ai_2_id], references: [id], onDelete: Cascade)
-  members                  members?   @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  tugas_ai_2               tugas_ai_2              @relation(fields: [tugas_ai_2_id], references: [id], onDelete: Cascade)
+  members                  members?                @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  submission               tugas_ai_2_submissions? @relation(fields: [submission_id], references: [id], onDelete: SetNull)
 
   @@index([tugas_ai_2_id])
   @@index([member_id])
   @@index([tugas_ai_2_id, member_id])
   @@index([status])
-  @@index([task_submission_id])
+  @@index([submission_id])
   @@index([n8n_webhook_id])
 }
 
