@@ -11,6 +11,7 @@ import { getCurrentUser } from '@/lib/ssoAuth';
  * - limit (optional): The number of items per page (default: 10).
  * - search (optional): A search term to filter tasks by description.
  * - filter (optional): Filter by task status - 'semua', 'selesai', 'belum' (default: 'semua').
+ * - source (optional): Filter by platform source - 'tiktok', 'facebook', 'instagram' (default: all).
  */
 export async function GET(request) {
   const user = await getCurrentUser(request);
@@ -23,6 +24,7 @@ export async function GET(request) {
   const limit = parseInt(searchParams.get('limit') || '10', 10);
   const search = searchParams.get('search');
   const filter = searchParams.get('filter') || 'semua';
+  const source = searchParams.get('source') || null; // 'tiktok' | 'facebook' | 'instagram' | null (all)
 
   try {
     // Find the member based on email, google_id, or clerk_id
@@ -107,15 +109,17 @@ export async function GET(request) {
     }
 
     // Fetch tasks from both tables
+    // When source filter is set, skip tugas_ai (auto-verify, Instagram-only) if source != instagram
+    const fetchTugasAi = !source || source === 'instagram';
     const [tasksAiFromDb, tasksAi2FromDb] = await Promise.all([
-      // tugas_ai (auto-verify tasks)
-      prisma.tugas_ai.findMany({
-        where: whereClause,
-        include: includeFilter,
-        orderBy: {
-          post_timestamp: 'desc',
-        },
-      }),
+      // tugas_ai (auto-verify tasks) — Instagram only, skip if filtering by other platforms
+      fetchTugasAi
+        ? prisma.tugas_ai.findMany({
+            where: whereClause,
+            include: includeFilter,
+            orderBy: { post_timestamp: 'desc' },
+          })
+        : Promise.resolve([]),
       // tugas_ai_2 (screenshot tasks)
       prisma.tugas_ai_2.findMany({
         where: {
@@ -126,6 +130,7 @@ export async function GET(request) {
               mode: 'insensitive',
             },
           }),
+          ...(source && { source }), // platform filter: tiktok | facebook | instagram
         },
         select: {
           id: true,
@@ -137,45 +142,25 @@ export async function GET(request) {
           source: true,
           verification_rules: true,
           post_timestamp: true,
+          expires_at: true,
           created_at: true,
           updated_at: true,
+          // Primary source of truth for user progress
+          tugas_ai_2_submissions: {
+            where: { member_id: memberId },
+            orderBy: { created_at: 'desc' },
+            take: 1,
+          },
+          // Only for screenshot URL display
           tugas_ai_2_screenshots: {
-            where: {
-              member_id: memberId,
-            },
-            orderBy: {
-              uploaded_at: 'desc',
-            },
+            where: { member_id: memberId },
+            orderBy: { uploaded_at: 'desc' },
             take: 1,
           },
         },
-        orderBy: {
-          post_timestamp: 'desc',
-        },
+        orderBy: { post_timestamp: 'desc' },
       }),
     ]);
-
-    // Collect all task_submission_ids from screenshots
-    const taskSubmissionIds = tasksAi2FromDb
-      .flatMap(task => task.tugas_ai_2_screenshots)
-      .map(s => s.task_submission_id)
-      .filter(id => id != null);
-
-    // Query task_submissions for these IDs that belong to current user
-    const userTaskSubmissions = taskSubmissionIds.length > 0 
-      ? await prisma.task_submissions.findMany({
-          where: {
-            id: { in: taskSubmissionIds },
-            id_member: memberId,
-          },
-          select: {
-            id: true,
-            id_task: true,
-            status_submission: true,
-            waktu_klik: true,
-          },
-        })
-      : [];
 
     // Helper function to convert BigInt fields in an object
     const convertBigIntsInObject = (obj) => {
@@ -214,45 +199,48 @@ export async function GET(request) {
       return convertBigIntsInObject(processedTask);
     });
 
-    // Process tugas_ai_2 (screenshot) tasks
+    // Process tugas_ai_2 (screenshot) tasks — status driven by tugas_ai_2_submissions
     const processedTasksAi2 = tasksAi2FromDb.map(task => {
-      // Find screenshot from this user by member_id (already filtered in query)
-      const userScreenshot = task.tugas_ai_2_screenshots[0];
-      
-      // Determine status based on screenshot status field
+      const userSubmission = task.tugas_ai_2_submissions?.[0] ?? null;
+      const userScreenshot = task.tugas_ai_2_screenshots?.[0] ?? null;
+
+      // Status from submission (source of truth), fallback to screenshot for legacy data
       let status_submission = 'tersedia';
-      
-      if (userScreenshot) {
-        // Map screenshot status to task status
+      let batas_waktu = null;
+
+      if (userSubmission) {
+        status_submission = userSubmission.status;  // dikerjakan | menunggu_screenshot | sedang_verifikasi | selesai | gagal | expired
+        batas_waktu = userSubmission.batas_waktu?.toISOString?.() ?? userSubmission.batas_waktu ?? null;
+      } else if (userScreenshot) {
+        // Legacy fallback: no submission record but screenshot exists
         switch (userScreenshot.status) {
-          case 'sedang_verifikasi':
-            status_submission = 'sedang_verifikasi';
-            break;
-          case 'selesai':
-            status_submission = 'selesai';
-            break;
-          case 'gagal_diverifikasi':
-            status_submission = 'gagal_diverifikasi';
-            break;
-          default:
-            status_submission = 'sedang_verifikasi';
+          case 'sedang_verifikasi': status_submission = 'sedang_verifikasi'; break;
+          case 'selesai':           status_submission = 'selesai'; break;
+          case 'gagal_diverifikasi': status_submission = 'gagal_diverifikasi'; break;
+          default: status_submission = 'sedang_verifikasi';
+        }
+        if (status_submission === 'sedang_verifikasi' && userScreenshot.uploaded_at) {
+          const t = new Date(userScreenshot.uploaded_at);
+          t.setHours(t.getHours() + 4);
+          batas_waktu = t.toISOString();
         }
       }
 
-      let batas_waktu = null;
-      if (status_submission === 'sedang_verifikasi' && userScreenshot?.uploaded_at) {
-        const uploadTime = new Date(userScreenshot.uploaded_at);
-        uploadTime.setHours(uploadTime.getHours() + 4);
-        batas_waktu = uploadTime.toISOString();
-      }
-
-      const { tugas_ai_2_screenshots, ...restOfTask } = task;
+      const { tugas_ai_2_screenshots, tugas_ai_2_submissions, ...restOfTask } = task;
 
       const processedTask = {
         ...restOfTask,
         task_type: 'screenshot',
         status_submission,
         batas_waktu,
+        submission_data: userSubmission ? {
+          id: userSubmission.id,
+          status: userSubmission.status,
+          waktu_klik: userSubmission.waktu_klik,
+          batas_waktu: userSubmission.batas_waktu,
+          verification_attempts: userSubmission.verification_attempts,
+          max_retries: userSubmission.max_retries,
+        } : null,
         screenshot_data: userScreenshot ? {
           id: userScreenshot.id,
           url: userScreenshot.screenshot_url,

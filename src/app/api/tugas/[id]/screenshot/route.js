@@ -93,7 +93,7 @@ export async function POST(request, { params }) {
     const memberId = user.id;
     console.log('✅ [Screenshot Upload] User authenticated:', memberId);
 
-    // Verify task exists and is screenshot type
+    // Verify task exists
     console.log('📸 [Screenshot Upload] Verifying task...');
     const task = await prisma.tugas_ai_2.findUnique({
       where: { id: taskId },
@@ -101,7 +101,8 @@ export async function POST(request, { params }) {
         id: true, 
         keyword_tugas: true,
         verification_rules: true,
-        point_value: true
+        point_value: true,
+        source: true,
       }
     });
 
@@ -113,6 +114,38 @@ export async function POST(request, { params }) {
       );
     }
     console.log('✅ [Screenshot Upload] Task verified:', task.id);
+
+    // Gate: user must have clicked "Kerjakan" first (have an active submission)
+    const activeSubmission = await prisma.tugas_ai_2_submissions.findUnique({
+      where: { member_id_tugas_ai_2_id: { member_id: memberId, tugas_ai_2_id: taskId } },
+    });
+
+    if (!activeSubmission) {
+      console.log('❌ [Screenshot Upload] No active submission — user must click Kerjakan first');
+      return NextResponse.json(
+        { success: false, message: 'Klik tombol Kerjakan terlebih dahulu sebelum mengupload screenshot' },
+        { status: 403 }
+      );
+    }
+
+    if (activeSubmission.status === 'selesai') {
+      return NextResponse.json(
+        { success: false, message: 'Tugas ini sudah diselesaikan' },
+        { status: 400 }
+      );
+    }
+
+    if (activeSubmission.batas_waktu && new Date(activeSubmission.batas_waktu) < new Date()) {
+      // Mark submission as expired
+      await prisma.tugas_ai_2_submissions.update({
+        where: { id: activeSubmission.id },
+        data: { status: 'expired', updated_at: new Date() },
+      });
+      return NextResponse.json(
+        { success: false, message: 'Waktu pengerjaan sudah habis. Klik Kerjakan lagi untuk memulai ulang.' },
+        { status: 400 }
+      );
+    }
 
     // Parse form data
     console.log('📸 [Screenshot Upload] Parsing form data...');
@@ -129,12 +162,14 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Check if user already uploaded screenshot for this task
+    // Check if already uploaded a screenshot in this submission
     console.log('📸 [Screenshot Upload] Checking existing screenshot...');
     const existingScreenshot = await prisma.tugas_ai_2_screenshots.findFirst({
       where: {
         tugas_ai_2_id: taskId,
-        member_id: memberId
+        member_id: memberId,
+        submission_id: activeSubmission.id,
+        status: { not: 'gagal_diverifikasi' }, // allow re-upload after rejection
       }
     });
 
@@ -145,7 +180,7 @@ export async function POST(request, { params }) {
           success: false, 
           message: existingScreenshot.status === 'selesai'
             ? 'Anda sudah menyelesaikan tugas ini'
-            : 'Anda sudah mengupload screenshot untuk tugas ini'
+            : 'Screenshot sudah diupload dan sedang diverifikasi'
         },
         { status: 400 }
       );
@@ -158,13 +193,13 @@ export async function POST(request, { params }) {
     const screenshotUrl = await uploadToMinIO(screenshot, 'screenshots', 'task');
     console.log('✅ [Screenshot Upload] MinIO upload successful:', screenshotUrl);
 
-    // Create screenshot record with proper member_id tracking
+    // Create screenshot record linked to the active submission
     console.log('📸 [Screenshot Upload] Creating screenshot record...');
     const screenshotRecord = await prisma.tugas_ai_2_screenshots.create({
       data: {
         tugas_ai_2_id: taskId,
         member_id: memberId,
-        task_submission_id: null,
+        submission_id: activeSubmission.id,
         screenshot_url: screenshotUrl,
         screenshot_filename: screenshotFilename,
         link_komentar: commentLink,
@@ -173,6 +208,16 @@ export async function POST(request, { params }) {
         created_at: new Date(),
         updated_at: new Date()
       }
+    });
+
+    // Advance submission state to sedang_verifikasi
+    await prisma.tugas_ai_2_submissions.update({
+      where: { id: activeSubmission.id },
+      data: {
+        status: 'sedang_verifikasi',
+        waktu_upload: new Date(),
+        updated_at: new Date(),
+      },
     });
     console.log('✅ [Screenshot Upload] Screenshot record created:', screenshotRecord.id);
 
@@ -186,22 +231,29 @@ export async function POST(request, { params }) {
       // Don't fail the upload if stats recalculation fails
     }
 
-    // TODO: Trigger n8n webhook for AI verification
-    // const n8nWebhookUrl = process.env.N8N_SCREENSHOT_VERIFICATION_WEBHOOK;
-    // if (n8nWebhookUrl) {
-    //   await fetch(n8nWebhookUrl, {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({
-    //       screenshotId: screenshotRecord.id,
-    //       taskId: taskId,
-    //       memberId: memberId,
-    //       screenshotUrl: screenshotUrl,
-    //       commentLink: commentLink,
-    //       verificationRules: task.verification_rules
-    //     })
-    //   });
-    // }
+    // Trigger n8n webhook for AI screenshot verification (fire-and-forget)
+    const n8nWebhookUrl = process.env.N8N_SCREENSHOT_VERIFICATION_WEBHOOK;
+    if (n8nWebhookUrl) {
+      console.log('🤖 [Screenshot Upload] Triggering n8n verification webhook...');
+      fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          screenshotId: screenshotRecord.id,
+          submissionId: activeSubmission.id,
+          taskId: taskId,
+          memberId: memberId,
+          platform: task.source || 'instagram',
+          screenshotUrl: screenshotUrl,
+          commentLink: commentLink,
+          keyword: task.keyword_tugas,
+          verificationRules: task.verification_rules,
+          callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://berkomunitas.com'}/api/n8n/screenshot-callback`,
+        }),
+      }).catch(err => console.error('❌ [Screenshot Upload] n8n webhook fire failed:', err));
+    } else {
+      console.warn('⚠️ [Screenshot Upload] N8N_SCREENSHOT_VERIFICATION_WEBHOOK not set — skipping AI verification trigger');
+    }
 
     console.log('✅ [Screenshot Upload] Complete! Success response sending...');
     return NextResponse.json({

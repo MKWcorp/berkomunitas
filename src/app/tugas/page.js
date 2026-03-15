@@ -44,6 +44,7 @@ export default function TugasPage() {
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
   const [filter, setFilter] = useState('belum'); // 'semua' | 'selesai' | 'belum' | 'verifikasi' - default to 'belum'
+  const [sourceFilter, setSourceFilter] = useState('semua'); // 'semua' | 'tiktok' | 'facebook' | 'instagram'
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiTimeoutRef = useRef();
     // Add state for task statistics
@@ -95,15 +96,17 @@ export default function TugasPage() {
     }
   }, []);
   // Fetch tasks function - using functional updates to avoid stale closures
-  const fetchTasks = useCallback(async (currentPage, currentFilter) => {
+  const fetchTasks = useCallback(async (currentPage, currentFilter, currentSource) => {
     // Get current filter if not provided
     const filterToUse = currentFilter !== undefined ? currentFilter : filter;
+    const sourceToUse = currentSource !== undefined ? currentSource : sourceFilter;
     
     setLoading(currentPage === 1);
     setLoadingMore(currentPage > 1);
     try {
       const filterParam = filterToUse !== 'semua' ? `&filter=${filterToUse}` : '';
-      const response = await fetch(`/api/tugas?page=${currentPage}&limit=10${filterParam}`, { credentials: 'include' });
+      const sourceParam = sourceToUse !== 'semua' ? `&source=${sourceToUse}` : '';
+      const response = await fetch(`/api/tugas?page=${currentPage}&limit=10${filterParam}${sourceParam}`, { credentials: 'include' });
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Autentikasi gagal. Silakan login kembali.');
@@ -147,7 +150,7 @@ export default function TugasPage() {
     } finally {
       setLoading(false);
       setLoadingMore(false);    }
-  }, [filter]); // Include filter as dependency since it's used in default value
+  }, [filter, sourceFilter]); // Include filter and sourceFilter as dependencies
 
   // Fetch task statistics from API - separate from fetchTasks
   const fetchTaskStats = useCallback(async () => {
@@ -207,9 +210,11 @@ export default function TugasPage() {
       if (entries[0].isIntersecting && hasMore) {
         setPage(prevPage => {
           const nextPage = prevPage + 1;
-          // Use current filter from state directly to avoid dependency issues
           const currentFilter = filter;
-          fetch(`/api/tugas?page=${nextPage}&limit=10${currentFilter !== 'semua' ? `&filter=${currentFilter}` : ''}`, { credentials: 'include' })
+          const currentSource = sourceFilter;
+          const filterParam = currentFilter !== 'semua' ? `&filter=${currentFilter}` : '';
+          const sourceParam = currentSource !== 'semua' ? `&source=${currentSource}` : '';
+          fetch(`/api/tugas?page=${nextPage}&limit=10${filterParam}${sourceParam}`, { credentials: 'include' })
             .then(response => response.json())
             .then(result => {
               if (result.success) {
@@ -229,7 +234,7 @@ export default function TugasPage() {
       }
     });
     if (node) observer.current.observe(node);
-  }, [loadingMore, hasMore, filter]); // Include filter as dependency since we use it
+  }, [loadingMore, hasMore, filter, sourceFilter]); // Include filter and sourceFilter as dependencies
 
   // Smart Confetti Effect: Only for newly completed tasks
   useEffect(() => {
@@ -275,6 +280,17 @@ export default function TugasPage() {
     }
   }, []); // No dependencies needed since we use refs
 
+  // Handle source platform filter change (TikTok / Facebook / Instagram / Semua)
+  const handleSourceFilterChange = useCallback((newSource) => {
+    setSourceFilter(newSource);
+    setPage(1);
+    setHasMore(true);
+    setTasks([]);
+    if (fetchTasksRef.current) {
+      fetchTasksRef.current(1, filter, newSource);
+    }
+  }, [filter]); // filter is stable ref
+
   // Task Button with enhanced auto-refresh stats and real-time optimization
   const handleStartTask = (taskId) => {
     if (!memberId) return;
@@ -317,7 +333,7 @@ export default function TugasPage() {
     }
   };
 
-  // Handler for screenshot upload submission
+  // Handler for screenshot upload submission (legacy FormData path — used by detail page)
   const handleScreenshotSubmit = async (formData) => {
     try {
       const taskId = formData.get('task_id');
@@ -335,25 +351,22 @@ export default function TugasPage() {
       const result = await response.json();
       
       if (result.success) {
-        // Show success message
-        alert('Screenshot berhasil diupload! AI akan memverifikasi dalam 4 jam.');
-        
-        // Refresh tasks and stats
-        await fetchTasks(1);
-        await fetchTaskStats();
-        
-        // Show confetti
-        setShowConfetti(true);
-        if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
-        confettiTimeoutRef.current = setTimeout(() => {
-          setShowConfetti(false);
-        }, 3000);
+        await handleScreenshotSuccess();
       }
     } catch (error) {
       console.error('Screenshot upload error:', error);
-      throw error; // Re-throw to be handled by form
+      throw error;
     }
   };
+
+  // Callback used by ScreenshotTaskDropdown — just refresh list + stats + confetti
+  const handleScreenshotSuccess = useCallback(async () => {
+    await fetchTasks(1);
+    await fetchTaskStats();
+    setShowConfetti(true);
+    if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
+    confettiTimeoutRef.current = setTimeout(() => setShowConfetti(false), 3000);
+  }, [fetchTasks, fetchTaskStats]);
   
   // Enhanced Countdown Timer with proper timeout API call and responsive design
   const CountdownTimer = ({ deadline, taskId }) => {
@@ -536,7 +549,39 @@ export default function TugasPage() {
           isActive={filter === 'verifikasi'}
           tooltip="Tugas yang sedang diverifikasi atau gagal diverifikasi (dengan tombol 'Coba Lagi')"
         />
-      </div>{/* Add helpful text for users with active filter indicator */}
+      </div>
+
+      {/* Platform Source Filter Tabs */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[
+          { key: 'semua',     label: 'Semua',     emoji: '🌐' },
+          { key: 'tiktok',    label: 'TikTok',    emoji: '🎵' },
+          { key: 'facebook',  label: 'Facebook',  emoji: '📘' },
+          { key: 'instagram', label: 'Instagram', emoji: '📸' },
+        ].map(({ key, label, emoji }) => (
+          <button
+            key={key}
+            onClick={() => handleSourceFilterChange(key)}
+            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all border ${
+              sourceFilter === key
+                ? key === 'tiktok'    ? 'bg-black text-white border-black'
+                : key === 'facebook'  ? 'bg-blue-600 text-white border-blue-600'
+                : key === 'instagram' ? 'bg-gradient-to-r from-pink-500 to-orange-400 text-white border-pink-500'
+                : 'bg-indigo-600 text-white border-indigo-600'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+            }`}
+          >
+            {emoji} {label}
+          </button>
+        ))}
+        {sourceFilter !== 'semua' && (
+          <span className="self-center text-xs text-gray-500">
+            Platform: <span className="font-semibold capitalize">{sourceFilter}</span>
+          </span>
+        )}
+      </div>
+
+      {/* Add helpful text for users with active filter indicator */}
       <div className="mb-4">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-2">
           {!statsLoading && (
@@ -584,7 +629,7 @@ export default function TugasPage() {
               activeEvents={activeEvents}
               highestBoostEvent={highestBoostEvent}
               onTaskAction={handleTaskAction}
-              onScreenshotSubmit={handleScreenshotSubmit}
+              onScreenshotSubmit={handleScreenshotSuccess}
               formatInstagramLink={formatInstagramLink}
               router={router}
             />
