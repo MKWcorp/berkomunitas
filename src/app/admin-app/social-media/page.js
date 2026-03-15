@@ -83,6 +83,8 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
   });
 
   const [members, setMembers] = useState([]);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchMembers();
@@ -105,6 +107,9 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
         username: ''
       });
     }
+    // Reset search state when modal opens/closes
+    setMemberSearch('');
+    setMemberDropdownOpen(false);
   }, [socialMedia, open]);
 
   async function fetchMembers() {
@@ -133,6 +138,30 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
     { value: 'other', label: 'Lainnya' }
   ];
 
+  // Filter members based on search
+  const filteredMembers = members.filter(member => {
+    if (!memberSearch) return true;
+    const searchLower = memberSearch.toLowerCase();
+    return (
+      member.nama_lengkap?.toLowerCase().includes(searchLower) ||
+      member.username?.toLowerCase().includes(searchLower) ||
+      member.email?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Get selected member display name
+  const selectedMember = members.find(m => m.id === form.member_id);
+  const selectedMemberDisplay = selectedMember 
+    ? `${selectedMember.nama_lengkap} (${selectedMember.username || selectedMember.email})`
+    : '';
+
+  // Handle member selection
+  const handleMemberSelect = (memberId) => {
+    setForm({...form, member_id: memberId});
+    setMemberDropdownOpen(false);
+    setMemberSearch('');
+  };
+
   return (
     <AdminModal
       isOpen={open}
@@ -146,19 +175,75 @@ function SocialMediaModal({ open, onClose, socialMedia = null, onSave, onDelete,
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Member <span className="text-red-500">*</span>
             </label>
-            <select
-              className="w-full backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50"
-              value={form.member_id}
-              onChange={(e) => setForm({...form, member_id: e.target.value})}
-              required
-            >
-              <option value="">Pilih Member</option>
-              {members.map(member => (
-                <option key={member.id} value={member.id}>
-                  {member.nama_lengkap} ({member.username || member.email})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              {/* Selected member display or Search input */}
+              {form.member_id && !memberDropdownOpen ? (
+                <div 
+                  className="w-full backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl px-4 py-3 cursor-pointer flex justify-between items-center hover:bg-white/40"
+                  onClick={() => setMemberDropdownOpen(true)}
+                >
+                  <span>{selectedMemberDisplay}</span>
+                  <button
+                    type="button"
+                    className="text-gray-500 hover:text-red-500 ml-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setForm({...form, member_id: ''});
+                      setMemberSearch('');
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-3.5 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full backdrop-blur-lg bg-white/30 border border-white/40 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-blue-500/50"
+                      placeholder="Cari member..."
+                      value={memberSearch}
+                      onChange={(e) => {
+                        setMemberSearch(e.target.value);
+                        setMemberDropdownOpen(true);
+                      }}
+                      onFocus={() => setMemberDropdownOpen(true)}
+                    />
+                  </div>
+                  
+                  {/* Dropdown list */}
+                  {memberDropdownOpen && (
+                    <div className="absolute z-50 w-full mt-1 backdrop-blur-lg bg-white/95 border border-white/40 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                      {filteredMembers.length > 0 ? (
+                        filteredMembers.map(member => (
+                          <div
+                            key={member.id}
+                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-white/20 last:border-0"
+                            onClick={() => handleMemberSelect(member.id)}
+                          >
+                            <div className="font-medium text-gray-900">{member.nama_lengkap}</div>
+                            <div className="text-sm text-gray-600">{member.username || member.email}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-gray-500 text-center">
+                          Tidak ada member ditemukan
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Click outside to close dropdown */}
+              {memberDropdownOpen && (
+                <div 
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMemberDropdownOpen(false)}
+                />
+              )}
+            </div>
           </div>
 
           <div>
